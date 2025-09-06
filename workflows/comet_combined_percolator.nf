@@ -40,7 +40,7 @@ workflow wf_comet_combined_percolator {
 
             CONVERT_TO_LIMELIGHT_XML_COM(
                 COMET.out.pepxml.map { it[1] }.collect(), 
-                PERCOLATOR.out.pout, 
+                PERCOLATOR.out.pout.map { it[1] },
                 fasta, 
                 comet_params,
                 params.limelight_import_decoys,
