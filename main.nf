@@ -70,9 +70,9 @@ workflow {
     }
 
     if(params.process_separately) {
-        wf_comet_percolator_separate(spectra_files_ch, comet_params, fasta, from_raw_files)
+        wf_comet_separate_percolator(spectra_files_ch, comet_params, fasta, from_raw_files)
     } else {
-        wf_comet_percolator_combined(spectra_files_ch, comet_params, fasta, from_raw_files)
+        wf_comet_combined_percolator(spectra_files_ch, comet_params, fasta, from_raw_files)
     }
 
 }
