@@ -6,11 +6,11 @@ process PERCOLATOR {
     container params.images.percolator
 
     input:
-        path pin_file
+        tuple val(sample_id), path(pin_file)
         val import_decoys
 
     output:
-        path("${pin_file.baseName}.pout.xml"), emit: pout
+        tuple val(sample_id), path("${sample_id}.pout.xml"), emit: pout
         path("*.stdout"), emit: stdout
         path("*.stderr"), emit: stderr
 
@@ -21,9 +21,16 @@ process PERCOLATOR {
     """
     echo "Running percolator..."
     percolator \
-        ${decoy_import_flag} -X "${pin_file.baseName}.pout.xml" \
+        ${decoy_import_flag} -X "${sample_id}.pout.xml" \
         ${pin_file} \
-        > >(tee "percolator.stdout") 2> >(tee "percolator.stderr" >&2)
+        > >(tee "${sample_id}.percolator.stdout") 2> >(tee "${sample_id}.percolator.stderr" >&2)
     echo "Done!" # Needed for proper exit
+    """
+
+    stub:
+    """
+    touch "${sample_id}.pout.xml"
+    touch "${sample_id}.percolator.stdout"
+    touch "${sample_id}.percolator.stderr"
     """
 }

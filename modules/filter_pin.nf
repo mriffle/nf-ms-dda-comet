@@ -9,22 +9,23 @@ process FILTER_PIN {
     container params.images.filter_pin
 
     input:
-        each path(pin)
+        tuple val(sample_id), path(pin)
 
     output:
-        path("${pin.baseName}.filtered.pin"), emit: filtered_pin
+        tuple val(sample_id), path("${sample_id}.filtered.pin"), emit: filtered_pin
         path("*.stderr"), emit: stderr
 
     script:
     """
     echo "Removing all non rank one hits from Percolator input file..."
-        ${exec_java_command(task.memory)} ${pin} >${pin.baseName}.filtered.pin 2> >(tee "${pin.baseName}.filtered.pin.stderr" >&2)
+        ${exec_java_command(task.memory)} ${pin} >${sample_id}.filtered.pin 2> >(tee "${sample_id}.filtered.pin.stderr" >&2)
 
     echo "Done!" # Needed for proper exit
     """
 
     stub:
     """
-    touch "${pin.baseName}.filtered.pin"
+    touch "${sample_id}.filtered.pin"
+    touch "${sample_id}.filtered.pin.stderr"
     """
 }

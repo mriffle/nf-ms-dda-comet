@@ -9,7 +9,8 @@ include { PANORAMA_GET_RAW_FILE } from "./modules/panorama"
 include { PANORAMA_GET_RAW_FILE_LIST } from "./modules/panorama"
 
 // Sub workflows
-include { wf_comet_percolator } from "./workflows/comet_percolator"
+include { wf_comet_combined_percolator } from "./workflows/comet_combined_percolator"
+include { wf_comet_separate_percolator } from "./workflows/comet_separate_percolator"
 
 //
 // The main workflow
@@ -68,7 +69,11 @@ workflow {
         }
     }
 
-    wf_comet_percolator(spectra_files_ch, comet_params, fasta, from_raw_files)
+    if(params.process_separately) {
+        wf_comet_separate_percolator(spectra_files_ch, comet_params, fasta, from_raw_files)
+    } else {
+        wf_comet_combined_percolator(spectra_files_ch, comet_params, fasta, from_raw_files)
+    }
 
 }
 
