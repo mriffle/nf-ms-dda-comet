@@ -66,6 +66,9 @@ The ``params`` Section
      - ``comet_params``
      - That path to the location of the Comet params file to be used in the Comet search. This can be a directory location (e.g., ``/data/mass_spec/comet.params`` or a Panorama WebDAV URL (described above). Default: ``'comet.params'``.
    * - 
+     - ``process_separately``
+     - Set to ``true`` to run Percolator (and upload to Limelight) separately for each raw file in ``spectra_dir``. This results in a separate Percolator output file and a separate search in Limelight for each raw file. Set to ``false`` to combine all Comet results into a single Percolator run and upload all results as a single search (with sub-searches) to Limelight. Setting to ``false`` may result in better Percolator statistics, but may make it harder to compare results from individual raw files to results from other searches. Default: ``false``.
+   * - 
      - ``limelight_upload``
      - Set to ``'true'`` to upload to Limelight. If set to ``true``, the following Limelight-related parameters apply. Default: ``false``.
    * - 
