@@ -1,3 +1,8 @@
+def exec_java_command(mem) {
+    def xmx = "-Xmx${mem.toGiga()-1}G"
+    return "java -Djava.aws.headless=true ${xmx} -jar /usr/local/bin/cometPercolator2LimelightXML.jar"
+}
+
 process CONVERT_TO_LIMELIGHT_XML_SEP {
     publishDir "${params.result_dir}/limelight", failOnError: true, mode: 'copy'
     label 'process_low'
