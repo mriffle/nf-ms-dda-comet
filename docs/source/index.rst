@@ -1,8 +1,8 @@
-===================================
-TEI-REX DDA Nextflow Documentation
-===================================
-This workflow will run the DDA workflow developed as part of the IARPA TEI-REX project. Please use the links below to navigate to pages
-describing how to install and run the workflow, how to retrieve results, and how to set up AWS Batch to run the workflow in the cloud.
+======================================================================
+Comet (and Percolator) DDA Nextflow Documentation
+======================================================================
+This will run an automated Nextflow workflow that will run msconvert, Comet, Percolator, and (optionally) upload to Limelight for data analysis, sharing, and visualization.
+Please use the links below to navigate to pages describing how to install and run the workflow, how to retrieve results, and how to set up AWS Batch to run the workflow in the cloud.
 
 Getting Help, Providing Feedback, or Reporting Problems
 =======================================================

@@ -3,14 +3,13 @@ def exec_java_command(mem) {
     return "java -Djava.aws.headless=true ${xmx} -jar /usr/local/bin/limelightSubmitImport.jar"
 }
 
-process UPLOAD_TO_LIMELIGHT {
+process UPLOAD_TO_LIMELIGHT_SEP {
     publishDir "${params.result_dir}/limelight", failOnError: true, mode: 'copy'
     label 'process_low'
     container params.images.limelight_upload
 
     input:
-        path limelight_xml
-        path mzml_files
+        tuple val(sample_id), path(mzml_file), path(limelight_xml)
         path fasta
         val webapp_url
         val project_id
@@ -29,10 +28,8 @@ process UPLOAD_TO_LIMELIGHT {
         tags_param = "--search-tag=\"${tags.split(',').join('\" --search-tag=\"')}\""
     }
 
-    scans_param = "--scan-file=${(mzml_files as List).join(' --scan-file=')}"
-
     """
-    echo "Submitting search results for Limelight import..."
+    echo "Submitting search results for Limelight import (${sample_id})..."
         ${exec_java_command(task.memory)} \
         --retry-count-limit=5 \
         --limelight-web-app-url=${webapp_url} \
@@ -43,9 +40,15 @@ process UPLOAD_TO_LIMELIGHT {
         --search-description="${search_long_name}" \
         --search-short-label="${search_short_name}" \
         --path="${workflow.launchDir}" \
-        ${scans_param} \
+        --scan-file=${mzml_file} \
         ${tags_param} \
-        > >(tee "limelight-submit-upload.stdout") 2> >(tee "limelight-submit-upload.stderr" >&2)
+        > >(tee "${sample_id}.limelight-submit-upload.stdout") 2> >(tee "${sample_id}.limelight-submit-upload.stderr" >&2)
     echo "Done!" # Needed for proper exit
+    """
+
+    stub:
+    """
+    touch "${sample_id}.limelight-submit-upload.stdout"
+    touch "${sample_id}.limelight-submit-upload.stderr"
     """
 }

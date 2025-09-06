@@ -3,7 +3,7 @@ def exec_java_command(mem) {
     return "java -Djava.aws.headless=true ${xmx} -jar /usr/local/bin/cometPercolator2LimelightXML.jar"
 }
 
-process CONVERT_TO_LIMELIGHT_XML {
+process CONVERT_TO_LIMELIGHT_XML_COM {
     publishDir "${params.result_dir}/limelight", failOnError: true, mode: 'copy'
     label 'process_low'
     label 'process_high_memory'

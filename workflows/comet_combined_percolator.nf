@@ -4,10 +4,10 @@ include { COMET } from "../modules/comet"
 include { PERCOLATOR } from "../modules/percolator"
 include { FILTER_PIN } from "../modules/filter_pin"
 include { COMBINE_PIN_FILES } from "../modules/combine_pin_files"
-include { CONVERT_TO_LIMELIGHT_XML } from "../modules/limelight_xml_convert"
-include { UPLOAD_TO_LIMELIGHT } from "../modules/limelight_upload"
+include { CONVERT_TO_LIMELIGHT_XML_COM } from "../modules/limelight_xml_convert_combined"
+include { UPLOAD_TO_LIMELIGHT_COM } from "../modules/limelight_upload_combined"
 
-workflow wf_comet_percolator {
+workflow wf_comet_percolator_combined {
 
     take:
         spectra_file_ch
@@ -26,18 +26,18 @@ workflow wf_comet_percolator {
 
         COMET(mzml_file_ch, comet_params, fasta)
         FILTER_PIN(COMET.out.pin)
-        filtered_pin_files = FILTER_PIN.out.filtered_pin.collect()
 
+        filtered_pin_files = FILTER_PIN.out.filtered_pin.map { it[1] }.collect()
         COMBINE_PIN_FILES(filtered_pin_files)
 
         PERCOLATOR(
-            COMBINE_PIN_FILES.out.combined_pin,
+            tuple("combined", COMBINE_PIN_FILES.out.combined_pin),
             params.limelight_import_decoys
         )
 
         if (params.limelight_upload) {
 
-            CONVERT_TO_LIMELIGHT_XML(
+            CONVERT_TO_LIMELIGHT_XML_COM(
                 COMET.out.pepxml.collect(), 
                 PERCOLATOR.out.pout, 
                 fasta, 
@@ -46,7 +46,7 @@ workflow wf_comet_percolator {
                 params.limelight_entrapment_prefix ? params.limelight_entrapment_prefix : false
             )
 
-            UPLOAD_TO_LIMELIGHT(
+            UPLOAD_TO_LIMELIGHT_COM(
                 CONVERT_TO_LIMELIGHT_XML.out.limelight_xml,
                 mzml_file_ch.collect(),
                 fasta,
