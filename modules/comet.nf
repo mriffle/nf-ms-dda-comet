@@ -10,8 +10,8 @@ process COMET {
         path fasta_file
 
     output:
-        tuple val(sample_id), path("*.pepxml"), emit: pepxml
-        tuple val(sample_id), path("*.pin"), emit: pin
+        tuple val(sample_id), path("${sample_id}.pep.xml"), emit: pepxml
+        tuple val(sample_id), path("${sample_id}.pin"), emit: pin
         path("*.stdout"), emit: stdout
         path("*.stderr"), emit: stderr
 
