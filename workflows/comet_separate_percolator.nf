@@ -54,7 +54,7 @@ workflow wf_comet_separate_percolator {
 
             // Create paired channel for mzML files and limelight XML outputs
             upload_pairs = mzml_file_ch
-                .join(CONVERT_TO_LIMELIGHT_XML.out.limelight_xml)
+                .join(CONVERT_TO_LIMELIGHT_XML_SEP.out.limelight_xml)
                 .map { sample_id, mzml_file, limelight_xml ->
                     tuple(sample_id, mzml_file, limelight_xml)
                 }
