@@ -9,8 +9,8 @@ include { PANORAMA_GET_RAW_FILE } from "./modules/panorama"
 include { PANORAMA_GET_RAW_FILE_LIST } from "./modules/panorama"
 
 // Sub workflows
-include { wf_comet_percolator_combined } from "./workflows/comet_percolator_combined"
-include { wf_comet_percolator_separate } from "./workflows/comet_percolator_separate"
+include { wf_comet_percolator_combined } from "./workflows/comet_combined_percolator"
+include { wf_comet_percolator_separate } from "./workflows/comet_separate_percolator"
 
 //
 // The main workflow
