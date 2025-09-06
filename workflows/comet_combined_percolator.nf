@@ -7,7 +7,7 @@ include { COMBINE_PIN_FILES } from "../modules/combine_pin_files"
 include { CONVERT_TO_LIMELIGHT_XML_COM } from "../modules/limelight_xml_convert_combined"
 include { UPLOAD_TO_LIMELIGHT_COM } from "../modules/limelight_upload_combined"
 
-workflow wf_comet_percolator_combined {
+workflow wf_comet_combined_percolator {
 
     take:
         spectra_file_ch
