@@ -48,7 +48,7 @@ workflow wf_comet_combined_percolator {
             )
 
             UPLOAD_TO_LIMELIGHT_COM(
-                CONVERT_TO_LIMELIGHT_XML.out.limelight_xml,
+                CONVERT_TO_LIMELIGHT_XML_COM.out.limelight_xml,
                 mzml_file_ch.map { it[1] }.collect(),
                 fasta,
                 params.limelight_webapp_url,
