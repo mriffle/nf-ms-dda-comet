@@ -37,8 +37,7 @@ process UPLOAD_TO_LIMELIGHT_SEP {
         --project-id=${project_id} \
         --limelight-xml-file=${limelight_xml} \
         --fasta-file=${fasta} \
-        --search-description="${search_long_name}" \
-        --search-short-label="${search_short_name}" \
+        --search-description="${search_long_name} (${sample_id})" \
         --path="${workflow.launchDir}" \
         --scan-file=${mzml_file} \
         ${tags_param} \
