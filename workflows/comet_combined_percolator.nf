@@ -21,7 +21,10 @@ workflow wf_comet_combined_percolator {
         if(from_raw_files) {
             mzml_file_ch = MSCONVERT(spectra_file_ch)
         } else {
-            mzml_file_ch = spectra_file_ch
+            // If starting with mzML files, create tuples with sample_id
+            mzml_file_ch = spectra_file_ch.map { mzml_file ->
+                tuple(mzml_file.baseName, mzml_file)
+            }
         }
 
         COMET(mzml_file_ch, comet_params, fasta)
