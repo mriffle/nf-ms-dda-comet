@@ -47,6 +47,11 @@ nextflow.config                  Pipeline params, execution profiles (standard, 
 container_images.config          Centralized, version-pinned Docker image registry.
                                  Edit here to bump tool versions.
 
+nextflow_schema.json             Parameter schema (nf-core/nf-schema format).
+                                 Validated at launch by the nf-schema plugin
+                                 (strict: unknown params error out). Keep in sync
+                                 with params when you add/rename one.
+
 conf/base.config                 Resource labels (process_low, process_medium,
                                  process_high, process_long, process_high_memory,
                                  *_constant variants) and retry policy.
@@ -170,9 +175,12 @@ docs (`set_up_aws`) for details. Nothing is loaded in `nextflow.config`.
 
 - `standard` — local executor, `executor.queueSize = 1` (one task at a time).
 - `slurm` — slurm executor.
-
-There is no `aws` profile in this repo; users who run on AWS Batch supply that via their
-own `-c pipeline.config` (the user docs cover this).
+- `aws` — AWS Batch executor (`awsbatch`); also the trigger for the AWS Secrets
+  Manager bridge (`workflow.profile` must contain `aws` — see §4.9 of CLAUDE.md). It
+  pins the bridge processes to the local executor, sets `params.aws_region`, and sets
+  its own `process.resourceLimits`. Batch-specific bits the profile does **not**
+  hard-code — the job queue and the S3 cache directories — are supplied by the user's
+  own `-c pipeline.config` (the user docs cover this).
 
 ## Adding or Modifying a Step
 

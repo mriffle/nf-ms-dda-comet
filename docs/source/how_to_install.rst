@@ -33,7 +33,14 @@ Once installed you can easily access the command line of your new Ubuntu LTS ins
 
 Install Nextflow
 ================
-Follow the instructions at: https://www.nextflow.io/docs/latest/getstarted.html. 
+Follow the instructions at: https://www.nextflow.io/docs/latest/getstarted.html.
+
+.. important::
+
+    This workflow requires **Nextflow 25.10.0 or newer**. The workflow validates
+    its parameters against a schema at startup using the ``nf-schema`` plugin,
+    which (in the only version compatible with Nextflow 26) requires Nextflow
+    25.10 or later. Running on an older Nextflow will fail at launch.
 
 Credentials
 ===========

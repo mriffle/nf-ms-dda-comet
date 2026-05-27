@@ -1,0 +1,202 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://raw.githubusercontent.com/mriffle/nf-ms-dda-comet/main/nextflow_schema.json",
+    "title": "nf-ms-dda-comet pipeline parameters",
+    "description": "Automated Nextflow workflow for processing data with comet, percolator and uploading to Limelight.",
+    "type": "object",
+    "$defs": {
+        "input_output_options": {
+            "title": "Input/output options",
+            "type": "object",
+            "fa_icon": "fas fa-terminal",
+            "description": "Define where the pipeline should find input data and save output data.",
+            "required": ["fasta", "spectra_dir"],
+            "properties": {
+                "fasta": {
+                    "type": "string",                    "fa_icon": "fas fa-dna",
+                    "description": "Path to the FASTA file of protein sequences to search.",
+                    "help_text": "A local filesystem path or a PanoramaWeb WebDAV URL (any value beginning with 'https://' is downloaded from PanoramaWeb automatically)."
+                },
+                "spectra_dir": {
+                    "type": "string",                    "fa_icon": "fas fa-folder-open",
+                    "description": "Directory containing the mzML or RAW files to search.",
+                    "help_text": "A local directory path or a PanoramaWeb WebDAV URL. The directory is sniffed for '*.mzML' first, falling back to '*.raw'. PanoramaWeb URLs (beginning with 'https://') are downloaded automatically; multiple URLs may be given, one per line."
+                },
+                "comet_params": {
+                    "type": "string",                    "fa_icon": "fas fa-file-alt",
+                    "description": "Path to the Comet params file used for the search.",
+                    "help_text": "A local filesystem path or a PanoramaWeb WebDAV URL (beginning with 'https://').",
+                    "default": "comet.params"
+                },
+                "result_dir": {
+                    "type": "string",                    "fa_icon": "fas fa-folder",
+                    "description": "Directory where pipeline results will be published.",
+                    "default": "results/nf-ms-dda-comet"
+                },
+                "report_dir": {
+                    "type": "string",                    "fa_icon": "fas fa-folder",
+                    "description": "Directory where Nextflow execution reports (timeline, report, trace) will be written.",
+                    "default": "reports/nf-ms-dda-comet"
+                },
+                "email": {
+                    "type": "string",
+                    "format": "email",
+                    "fa_icon": "fas fa-envelope",
+                    "description": "Email address to notify on workflow completion.",
+                    "help_text": "If set, a notification email is sent when the workflow finishes. Requires the 'mail' section of the config to be configured. If unset, no email is sent.",
+                    "pattern": "^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$"
+                }
+            }
+        },
+        "processing_options": {
+            "title": "Processing options",
+            "type": "object",
+            "fa_icon": "fas fa-cogs",
+            "description": "Control how Comet results are post-processed.",
+            "properties": {
+                "process_separately": {
+                    "type": "boolean",
+                    "fa_icon": "fas fa-code-branch",
+                    "description": "Post-process each Comet result separately rather than combining them.",
+                    "help_text": "When true, each Comet result is run through Percolator (and uploaded to Limelight) as a separate search. When false (default), all Comet results are combined into a single Percolator run and uploaded to Limelight as a single search with sub-searches.",
+                    "default": false
+                }
+            }
+        },
+        "limelight_options": {
+            "title": "Limelight upload options",
+            "type": "object",
+            "fa_icon": "fas fa-cloud-upload-alt",
+            "description": "Options controlling upload of results to a Limelight server. Required Limelight options apply only when 'limelight_upload' is true.",
+            "properties": {
+                "limelight_upload": {
+                    "type": "boolean",
+                    "fa_icon": "fas fa-upload",
+                    "description": "Upload the search results to Limelight.",
+                    "help_text": "When true, the remaining limelight_* options apply. limelight_webapp_url, limelight_project_id, limelight_search_description, limelight_search_short_name and limelight_tags are all required when this is true.",
+                    "default": false
+                },
+                "limelight_webapp_url": {
+                    "type": "string",
+                    "format": "uri",
+                    "fa_icon": "fas fa-link",
+                    "description": "URL of the Limelight instance to upload to.",
+                    "help_text": "Required when limelight_upload is true. Example: 'https://limelight.yeastrc.org/limelight'."
+                },
+                "limelight_project_id": {
+                    "type": "integer",
+                    "fa_icon": "fas fa-hashtag",
+                    "description": "Limelight project ID to upload data into.",
+                    "help_text": "Required when limelight_upload is true."
+                },
+                "limelight_search_description": {
+                    "type": "string",
+                    "fa_icon": "fas fa-align-left",
+                    "description": "One-line description of the search shown in Limelight.",
+                    "help_text": "Required when limelight_upload is true."
+                },
+                "limelight_search_short_name": {
+                    "type": "string",
+                    "fa_icon": "fas fa-tag",
+                    "description": "Brief one-word nickname for the search, used to label data in plots.",
+                    "help_text": "Required when limelight_upload is true."
+                },
+                "limelight_tags": {
+                    "type": "string",
+                    "fa_icon": "fas fa-tags",
+                    "description": "Comma-delimited list of Limelight tags to apply to this search.",
+                    "help_text": "Tags that don't yet exist are created. Tag categories may be given as 'category~tag' (e.g. 'treatment~control,organism~yeast'). Required when limelight_upload is true."
+                },
+                "limelight_import_decoys": {
+                    "type": "boolean",
+                    "fa_icon": "fas fa-mask",
+                    "description": "Import decoy hits into Limelight to enable target/decoy QC visualization.",
+                    "help_text": "Dramatically increases file sizes; only enable when needed.",
+                    "default": false
+                },
+                "limelight_entrapment_prefix": {
+                    "type": "string",
+                    "fa_icon": "fas fa-shield-alt",
+                    "description": "Protein name prefix marking entrapment decoys for Limelight QC.",
+                    "help_text": "Any protein whose name begins with this string is treated by Limelight as an entrapment decoy (a target hit that is secretly a decoy), enabling error-estimation QC tools. Example: 'ENTRAP'."
+                }
+            }
+        },
+        "caching_options": {
+            "title": "Caching options",
+            "type": "object",
+            "fa_icon": "fas fa-database",
+            "description": "Locations used to cache expensive, reusable intermediate files across runs.",
+            "properties": {
+                "mzml_cache_directory": {
+                    "type": "string",                    "fa_icon": "fas fa-folder",
+                    "description": "Directory where mzML files produced by msconvert are cached for reuse.",
+                    "help_text": "Set per execution profile (local path for standard/slurm, an s3:// path for AWS Batch)."
+                },
+                "panorama_cache_directory": {
+                    "type": "string",                    "fa_icon": "fas fa-folder",
+                    "description": "Directory where RAW files downloaded from PanoramaWeb are cached for reuse.",
+                    "help_text": "Set per execution profile (local path for standard/slurm, an s3:// path for AWS Batch)."
+                }
+            }
+        },
+        "aws_options": {
+            "title": "AWS Batch options",
+            "type": "object",
+            "fa_icon": "fab fa-aws",
+            "description": "Options consulted only when running on AWS Batch (-profile aws).",
+            "properties": {
+                "aws_region": {
+                    "type": "string",
+                    "fa_icon": "fas fa-globe-americas",
+                    "description": "AWS region of the Batch queue and Secrets Manager.",
+                    "help_text": "Used by the AWS Secrets Manager bridge when downloading from PanoramaWeb or uploading to Limelight on AWS Batch. Set by the 'aws' profile."
+                }
+            }
+        },
+        "container_image_options": {
+            "title": "Container image options",
+            "type": "object",
+            "fa_icon": "fas fa-docker",
+            "description": "Container image (with tag) used for each tool. Defaults live in container_images.config; override a tag to pin a different tool version.",
+            "properties": {
+                "images": {
+                    "type": "object",
+                    "fa_icon": "fas fa-docker",
+                    "description": "Map of tool name to container image reference.",
+                    "help_text": "Each process selects its image via params.images.<key>. Override a value to run a different image/version for that tool. Keys not listed here are still permitted.",
+                    "properties": {
+                        "ubuntu": { "type": "string" },
+                        "percolator": { "type": "string" },
+                        "panorama_client": { "type": "string" },
+                        "filter_pin": { "type": "string" },
+                        "limelight_xml_convert": { "type": "string" },
+                        "limelight_upload": { "type": "string" },
+                        "comet": { "type": "string" },
+                        "proteowizard": { "type": "string" }
+                    }
+                }
+            }
+        }
+    },
+    "allOf": [
+        {
+            "$ref": "#/$defs/input_output_options"
+        },
+        {
+            "$ref": "#/$defs/processing_options"
+        },
+        {
+            "$ref": "#/$defs/limelight_options"
+        },
+        {
+            "$ref": "#/$defs/caching_options"
+        },
+        {
+            "$ref": "#/$defs/aws_options"
+        },
+        {
+            "$ref": "#/$defs/container_image_options"
+        }
+    ]
+}

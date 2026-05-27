@@ -107,7 +107,7 @@ Every existing module follows the rules below. New or modified processes must to
 ### 4.2 Resources
 - Apply a resource `label` (`process_low`, `process_medium`, `process_high`, `process_long`, `process_high_memory`, and the `*_constant` variants). **Never** set `cpus`, `memory`, or `time` inline in a module.
 - All resource tiers live in `conf/base.config` as `withLabel:` blocks. If you need a new tier, add it there, don't define it ad hoc.
-- Resource values scale with `task.attempt`. Each tier states its raw desired amount (e.g. `{ 32 * task.attempt }`); the `process.resourceLimits` map automatically caps every request. The cap is set as a **literal map** — a default in `conf/base.config`, overridden per execution profile in `nextflow.config` (`standard`/`slurm`/`aws`) and in `tests/stub.config`. **Never** drive `resourceLimits` from `params` (e.g. `[cpus: params.max_cpus]`): it is evaluated eagerly at config-parse time, so a `-c`-supplied override (the user's copied `pipeline.config`, or `stub.config`) merges too late and is silently ignored — this was a real bug during the migration, see §6. A direct `process.resourceLimits = [...]` assignment merges last-wins and overrides cleanly. **Don't** reintroduce the old `check_max()` helper — it was a config-level function def that the Nextflow-26 strict parser rejects (§6). `resourceLimits` requires Nextflow ≥24.04 (pinned in the manifest).
+- Resource values scale with `task.attempt`. Each tier states its raw desired amount (e.g. `{ 32 * task.attempt }`); the `process.resourceLimits` map automatically caps every request. The cap is set as a **literal map** — a default in `conf/base.config`, overridden per execution profile in `nextflow.config` (`standard`/`slurm`/`aws`) and in `tests/stub.config`. **Never** drive `resourceLimits` from `params` (e.g. `[cpus: params.max_cpus]`): it is evaluated eagerly at config-parse time, so a `-c`-supplied override (the user's copied `pipeline.config`, or `stub.config`) merges too late and is silently ignored — this was a real bug during the migration, see §6. A direct `process.resourceLimits = [...]` assignment merges last-wins and overrides cleanly. **Don't** reintroduce the old `check_max()` helper — it was a config-level function def that the Nextflow-26 strict parser rejects (§6). `resourceLimits` requires Nextflow ≥24.04; the manifest floor is higher (`!>=25.10.0`), set by the nf-schema plugin (§4.12, §6).
 
 ### 4.3 Logging and exit handling
 - Wrap every CLI invocation in `> >(tee X.stdout) 2> >(tee X.stderr >&2)`.
@@ -153,7 +153,15 @@ This replaced an earlier `nextflow.config` env-injection hack (which forced ever
 
 ### 4.11 Updating documentation
 - If you change a process name, output filename, parameter name, or the set of files written to `results/`, also update the matching place in `docs/source/`. The docs drift faster than anything else in this repo — actively prevent it.
-- If you change a user-visible parameter, update `resources/pipeline.config` (the template users copy) and `docs/source/workflow_parameters.rst`.
+- If you change a user-visible parameter, update `resources/pipeline.config` (the template users copy), `docs/source/workflow_parameters.rst`, **and** `nextflow_schema.json` (§4.12).
+
+### 4.12 Parameter schema and validation (`nextflow_schema.json`)
+Params are validated at launch against `nextflow_schema.json` by the **nf-schema** plugin (`id 'nf-schema@2.7.2'` in `nextflow.config`; `validateParameters(cast_cli_params: true)` + `paramsSummaryLog(workflow)` at the top of the `workflow {}` body in `main.nf`). The schema is the canonical nf-core format: JSON Schema **draft 2020-12**, parameter groups under top-level **`$defs`** wired together by **`allOf`** (note: `$defs`, not `defs` or `definitions`).
+
+- **Every user-settable param must be in the schema.** Validation runs in **strict** mode (`validation.logging.unrecognisedParams = 'error'` in `nextflow.config`) — any param not described in the schema is a hard error, so a typo'd `--flag` fails the run instead of being silently ignored. When you add or rename a param, add/rename it here in the same change, or the next run breaks. This includes the `images` container map (modelled as a nested object in the `container_image_options` group) — we describe it in the schema rather than ignore-listing it.
+- **`cast_cli_params: true` is mandatory in the `validateParameters(...)` call.** On the v1 parser (Nextflow 25.10's default) CLI values arrive as strings (`--limelight_upload true` → `"true"`), and without this flag the v1 default would reject `"true"` against a `boolean` and `"1"` against an `integer`. With it, CLI strings are cast to the schema type before validation on both the v1 (25.10) and v2 (26) parsers. (This is separate from `Utils.asBool` in §6, which guards the *runtime* truthiness check; the schema cast only affects a temporary copy used for validation.)
+- **Do NOT use the existence-checking path formats** (`file-path`, `directory-path`, `path`) on these params. They make nf-schema assert the path exists, which is wrong here: output dirs (`result_dir`, `report_dir`) and caches don't exist yet (and caches can be `s3://`), and `fasta`/`spectra_dir`/`comet_params` may be `https://` PanoramaWeb URLs no local check can resolve. The pipeline does its own `checkIfExists` / `https://` branching in `main.nf`. Keep these as plain `string`. The non-asserting `email`/`uri` formats are fine.
+- The plugin floor pins the whole pipeline's Nextflow floor — see §6.
 
 ## 5. Cross-cutting source-of-truth files
 
@@ -164,6 +172,7 @@ When you need to change one of these things, change it *only* here:
 | Container image and version for any tool | `container_images.config` |
 | Resource tiers (cpus / memory / time per label) | `conf/base.config` |
 | Default params, execution profiles, reports | `nextflow.config` |
+| Parameter schema (types, groups, validation) | `nextflow_schema.json` (§4.12) |
 | Secret handling (directive + AWS Secrets Manager bridge) | `modules/aws.nf`, `lib/AwsSecrets.groovy`, the `secret` directive on consuming processes (§4.9) |
 | Template config users copy and edit | `resources/pipeline.config` |
 | User-facing docs | `docs/source/*.rst` |
@@ -171,6 +180,8 @@ When you need to change one of these things, change it *only* here:
 | Onboarding + conventions for agents (this file) | `CLAUDE.md` |
 
 ## 6. Known footguns
+
+**The Nextflow floor (`!>=25.10.0`) is dictated by nf-schema, not by our code.** We require param validation on Nextflow 26, and nf-schema 2.7.2 is the only line that works correctly there — and it requires Nextflow ≥25.10. Older nf-schema (2.5.x, floor 25.04) *loads* on NF 26 but its `validation` config scope is silently unrecognised, so `lenientMode`/casting is ignored and validation then wrongly rejects every boolean/integer CLI param. So there is **no** single nf-schema version spanning NF 25.04 → 26.04; 25.10 is the real minimum. Don't lower the manifest floor or downgrade the plugin expecting to "support older Nextflow 25" — it breaks NF 26 (which CI tests). If you bump the plugin, re-verify on **both** pinned engines (`tests/nextflow-versions.txt`), and confirm `validation.logging.unrecognisedParams` and `cast_cli_params` still exist (the config-key names have changed across nf-schema versions — `failUnrecognisedParams` was replaced by `logging.unrecognisedParams`).
 
 **Stray project name in `nextflow.config:1-5`.** The repo, Read the Docs URL, manifest, and Sphinx project are all `nf-ms-dda-comet`. The one remaining inconsistency is a docstring header at the top of `nextflow.config` that opens with `# Parameters for nf-maccoss-trex` — leftover from an earlier name. It has no functional effect; fix it if you're editing nearby, but don't introduce a new third name.
 

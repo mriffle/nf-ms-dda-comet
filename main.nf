@@ -15,10 +15,21 @@ include { BUILD_AWS_LIMELIGHT_SECRET } from "./modules/aws"
 include { wf_comet_combined_percolator } from "./workflows/comet_combined_percolator"
 include { wf_comet_separate_percolator } from "./workflows/comet_separate_percolator"
 
+// Parameter validation / summary against nextflow_schema.json
+include { validateParameters; paramsSummaryLog } from 'plugin/nf-schema'
+
 //
 // The main workflow
 //
 workflow {
+
+    // Validate params against nextflow_schema.json, then log the resolved set.
+    // cast_cli_params:true coerces CLI string values (e.g. `--limelight_upload
+    // true`, `--limelight_project_id 1`) to their schema-declared types before
+    // validation on both the v1 (NF 25.10) and v2 (NF 26) parsers — without it
+    // the v1 default would reject the string "true" against a boolean.
+    validateParameters(cast_cli_params: true)
+    log.info paramsSummaryLog(workflow)
 
     // Which API keys does this run actually need?
     needs_panorama = params.fasta.startsWith("https://") ||
