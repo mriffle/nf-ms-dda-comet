@@ -10,7 +10,7 @@ When running the workflow you should see output similar to:
 
     N E X T F L O W  ~  version 22.10.5
     NOTE: Your local project version looks outdated - a different revision is available in the remote repository [96d78f009f]
-    Launching `https://github.com/mriffle/nf-teirex-dda` [ridiculous_mahavira] DSL2 - revision: 39f01e6119 [main]
+    Launching `https://github.com/mriffle/nf-ms-dda-comet` [ridiculous_mahavira] DSL2 - revision: 39f01e6119 [main]
     executor >  awsbatch (23)
     [58/e7e490] process > wf_comet_percolator:ADD_FASTA_TO_COMET_PARAMS [100%] 1 of 1 ✔
     [skipped  ] process > wf_comet_percolator:MSCONVERT (7)             [100%] 9 of 9, stored: 9 ✔
@@ -42,13 +42,13 @@ which will be described below.
 
 Workflow Results
 ================
-All results will be output to the ``results/nf-teirex-dda`` subdirectory in the directory in which the workflow was
+All results will be output to the ``results/nf-ms-dda-comet`` subdirectory in the directory in which the workflow was
 run. In this directory is a subdirectory for each program that was run as part of the workflow. A full description
 of output files can be found below.
 
 Output Files
 ============
-Below are each subdirectory created in ``results/nf-teirex-dda`` and a description of files
+Below are each subdirectory created in ``results/nf-ms-dda-comet`` and a description of files
 that will be found in those directories.
 
 ``comet`` Subdirectory

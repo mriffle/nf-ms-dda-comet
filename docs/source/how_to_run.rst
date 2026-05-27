@@ -25,13 +25,13 @@ Follow these steps to run a workflow:
 
     This will create a directory named ``my-nextflow-run`` in your home directory and move into that directory.
 
-2. Copy in or create a pipeline.config file. A template can be found at: https://raw.githubusercontent.com/mriffle/nf-teirex-dda/main/resources/pipeline.config
+2. Copy in or create a pipeline.config file. A template can be found at: https://raw.githubusercontent.com/mriffle/nf-ms-dda-comet/main/resources/pipeline.config
 
     Example command:
 
     .. code-block:: bash
 
-       wget https://raw.githubusercontent.com/mriffle/nf-teirex-dda/main/resources/pipeline.config
+       wget https://raw.githubusercontent.com/mriffle/nf-ms-dda-comet/main/resources/pipeline.config
 
     You may edit this config file in two ways:
         
@@ -56,7 +56,7 @@ Follow these steps to run a workflow:
         For a complete desciption of all parameters see 
         :doc:`workflow_parameters`.
 
-3. Copy in or create a Comet params file. A template can be found at: https://raw.githubusercontent.com/mriffle/nf-teirex-dda/main/resources/comet.params
+3. Copy in or create a Comet params file. A template can be found at: https://raw.githubusercontent.com/mriffle/nf-ms-dda-comet/main/resources/comet.params
 
     This is the file used to configure Comet. It contains many settings that should be reviewed and changed to search your particular data. For more information about Comet parameters see: https://uwpr.github.io/Comet/parameters/parameters_202301/
 
@@ -64,7 +64,7 @@ Follow these steps to run a workflow:
 
     .. code-block:: bash
 
-       wget https://raw.githubusercontent.com/mriffle/nf-teirex-dda/main/resources/comet.params
+       wget https://raw.githubusercontent.com/mriffle/nf-ms-dda-comet/main/resources/comet.params
 
     You may edit this config file in two ways:
         
@@ -96,13 +96,13 @@ Follow these steps to run a workflow:
     
     .. code-block:: bash
 
-        nextflow pull -r main mriffle/nf-teirex-dda
+        nextflow pull -r main mriffle/nf-ms-dda-comet
 
    Then, to run the steps of the workflow on your **local computer**, execute this command:
 
     .. code-block:: bash
 
-        nextflow run -resume -r main mriffle/nf-teirex-dda -c pipeline.config
+        nextflow run -resume -r main mriffle/nf-ms-dda-comet -c pipeline.config
     
     .. note::
 
@@ -115,7 +115,7 @@ Follow these steps to run a workflow:
 
     .. code-block:: bash
 
-        nextflow run -resume -r main -profile aws mriffle/nf-teirex-dda -bucket-dir s3://bucket/dir -c pipeline.config
+        nextflow run -resume -r main -profile aws mriffle/nf-ms-dda-comet -bucket-dir s3://bucket/dir -c pipeline.config
 
     .. important::
 

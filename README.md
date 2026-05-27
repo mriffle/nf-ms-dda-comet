@@ -1,4 +1,4 @@
-# nf-teirex-dda
+# nf-ms-dda-comet
 
 **User documentation:** https://nf-ms-dda-comet.readthedocs.io/
 

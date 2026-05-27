@@ -4,7 +4,7 @@ Workflow Overview
 
 These documents describe a standardized Nextflow workflow for processing **DDA mass spectrometry
 data**. The source code for the workflow can be found at: 
-https://github.com/mriffle/nf-teirex-dda. 
+https://github.com/mriffle/nf-ms-dda-comet. 
 
 Workflow Components
 ===================
@@ -50,7 +50,7 @@ supply the locations of your data and execute a simple Nextflow command, such as
 
 .. code-block:: bash
 
-    nextflow run -resume -r main mriffle/nf-teirex-dda -c pipeline.config
+    nextflow run -resume -r main mriffle/nf-ms-dda-comet -c pipeline.config
 
 The entire workflow will be run automatically, downloading Docker images as necessary, and the results output to
 the ``results`` directory. See :doc:`how_to_install` for more details on how to install Nextflow and Docker. See 
