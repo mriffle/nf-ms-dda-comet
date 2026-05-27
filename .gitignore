@@ -5,6 +5,13 @@
 /test-data/results
 /test-data/.command.trace
 
+# Nextflow state from running the stub harness at the repo root
+/.nextflow
+/.nextflow.log*
+
+# Local multi-version Nextflow installs (tests/setup-nextflow.sh) — never committed
+/.test-tools/
+
 /docs/build
 .vscode
 

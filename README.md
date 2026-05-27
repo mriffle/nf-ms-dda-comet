@@ -78,6 +78,19 @@ resources/
 
 test-data/                       Small mzML + fasta + comet.params for smoke runs.
 
+tests/
+  run-stub-tests-all.sh          Runs the stub suite against every pinned Nextflow
+                                 version (what CI runs).
+  run-stub-tests.sh              Inner harness: -stub-run over an 8-case matrix
+                                 (1/3 files × combined/separate × upload on/off),
+                                 asserts published outputs. No Docker.
+  setup-nextflow.sh              Installs the pinned Nextflow versions locally into
+                                 .test-tools/ (gitignored). Run once per machine.
+  nextflow-versions.txt          Pinned Nextflow versions the suite runs against.
+  stub.config                    Disables Docker + caps CPU/RAM for stub runs.
+
+.github/workflows/ci.yml         Runs the stub suite (all versions) on every push / PR.
+
 docs/                            Sphinx documentation source (published to
                                  Read the Docs via .readthedocs.yaml).
 ```

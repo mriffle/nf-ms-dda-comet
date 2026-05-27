@@ -1,0 +1,6 @@
+# Nextflow versions the stub suite is run against.
+# One version per line; blank lines and # comments ignored.
+# Bump here, then re-run tests/setup-nextflow.sh to fetch new engines.
+# Used by tests/setup-nextflow.sh (prefetch) and tests/run-stub-tests-all.sh (run).
+25.10.4
+26.04.2

@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  stub-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # Installs every version in tests/nextflow-versions.txt into a local,
+      # gitignored .test-tools/ tree — identical to local development.
+      - name: Install Nextflow versions
+        run: ./tests/setup-nextflow.sh
+
+      # Runs the full stub matrix against each installed version.
+      - name: Run stub tests (all Nextflow versions)
+        run: ./tests/run-stub-tests-all.sh

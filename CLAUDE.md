@@ -43,12 +43,33 @@ Three things to internalize:
 
 ## 3. Commands
 
-There is no build, lint, unit-test harness, or CI. "Running the code" means running Nextflow.
+There is no build or lint step. Tests are stub-only for now (see below). "Running the code for real" means running Nextflow against test data.
 
 ```bash
-# Wiring check — uses every process's stub: block, no real tools execute.
-# Run this after any change to channel topology in main.nf or workflows/.
-nextflow run main.nf -stub-run --fasta test-data/test.fasta \
+# One-time per machine (and after bumping tests/nextflow-versions.txt):
+# install every pinned Nextflow version into a local, gitignored .test-tools/
+# tree. Needs Java + curl + internet.
+./tests/setup-nextflow.sh
+
+# Stub-test harness across ALL pinned Nextflow versions — what CI runs on push.
+# For each version runs the inner harness below; exits non-zero if any fails.
+./tests/run-stub-tests-all.sh
+
+# Inner stub harness (one Nextflow version — whatever NEXTFLOW_BIN/NXF_VER point
+# at, else `nextflow` on PATH). The canonical wiring check: -stub-run across an
+# 8-case matrix (1 vs 3 spectra files × combined vs separate × Limelight upload
+# on/off) against test-data/, asserting the published outputs that distinguish
+# each combination (per-file COMET fan-out, combined vs per-sample Percolator,
+# single vs per-sample Limelight XML). Multi-file fixtures are generated at
+# runtime by copying test.mzML — nothing large is committed. No Docker. Uses an
+# isolated NXF_HOME under .test-tools/ and seeds placeholder secrets there, so
+# it neither needs nor touches your real ~/.nextflow. Run after any change to
+# channel topology in main.nf or workflows/.
+./tests/run-stub-tests.sh
+
+# Manual single-mode stub run (what the harness wraps), if you want the raw
+# Nextflow invocation. Uses every process's stub: block; no real tools execute.
+nextflow run main.nf -stub-run -c tests/stub.config --fasta test-data/test.fasta \
     --spectra_dir test-data --comet_params test-data/comet.params
 
 # Real smoke run against bundled test data (no Limelight upload).
@@ -63,15 +84,7 @@ cd docs && pip install -r requirements.txt && make html
 # Output: docs/build/html/index.html
 ```
 
-**`-stub-run` still launches Docker containers.** Nextflow doesn't skip containers in stub mode — it just swaps the script body. If Docker isn't available locally (e.g., WSL2 without Docker Desktop integration), supply an override config:
-
-```bash
-cat > /tmp/no-docker.config << 'EOF'
-docker.enabled = false
-process.container = null
-EOF
-nextflow run main.nf -stub-run -c /tmp/no-docker.config --fasta ... --spectra_dir ... --comet_params ...
-```
+**`-stub-run` still launches Docker containers.** Nextflow doesn't skip containers in stub mode — it just swaps the script body. `tests/stub.config` disables Docker (`docker.enabled = false`, `process.container = null`) so stub runs work on any host with just Java + Nextflow — that's why CI needs no Docker. It also caps `params.max_cpus`/`params.max_memory` (so `check_max()` clamps every label — COMET's `process_high_constant` would otherwise demand far more cores than a GitHub runner has). **Keep `max_cpus <= 4` there** — CI runners are small. Pass it with `-c tests/stub.config` whenever Docker isn't available (e.g., WSL2 without Docker Desktop integration); the harness already does.
 
 To also exercise the PanoramaWeb stubs without real network, add `params.mzml_cache_directory` and `params.panorama_cache_directory` overrides pointing at writable local paths, and pass any `https://`-prefixed string for `--fasta` / `--spectra_dir` / `--comet_params` — the URL is parsed by `file().name` but never fetched in stub mode.
 
@@ -152,7 +165,11 @@ When you need to change one of these things, change it *only* here:
 
 **Stray project name in `nextflow.config:1-5`.** The repo, Read the Docs URL, manifest, and Sphinx project are all `nf-ms-dda-comet`. The one remaining inconsistency is a docstring header at the top of `nextflow.config` that opens with `# Parameters for nf-maccoss-trex` — leftover from an earlier name. It has no functional effect; fix it if you're editing nearby, but don't introduce a new third name.
 
-**No CI, no test harness.** The only protection against regressions is `-stub-run` for wiring and a manual smoke run against `test-data/`. Run both before declaring a non-trivial change done.
+**Tests are stub-only; no real-data CI.** Regression protection has two tiers: the stub harness (`./tests/run-stub-tests-all.sh` → the 8-case matrix of 1 vs 3 files × combined vs separate × upload on/off, run against every Nextflow version in `tests/nextflow-versions.txt`; runs in GitHub Actions on every push, see `.github/workflows/ci.yml`) and a *manual* smoke run against `test-data/` with real tools (Comet/Percolator actually execute — not in CI, requires Docker). The stub harness catches wiring breakage; it does **not** catch logic errors inside a process script, since stub blocks only `touch` outputs. Run the harness before declaring any topology change done, and a manual smoke run before declaring a process-script change done. Setup is in `tests/setup-nextflow.sh`; versions are pinned in `tests/nextflow-versions.txt`.
+
+**`nextflow.config` only parses under the legacy (v1) config parser.** Nextflow 26 makes its strict config parser the default, and it rejects two things this config relies on: the chained assignment on `nextflow.config:57` (`secret_value = env.X = ...getSecret(...)`) and the `def check_max(...)` function definition (`nextflow.config:141`). The stub harness sidesteps this by exporting `NXF_SYNTAX_PARSER=v1`, so it verifies the pipeline runs on the 26 *engine* — but real users on 26 with default settings will hit a `Config parsing failed` error. **Follow-up not yet done:** migrate `nextflow.config` (and audit `conf/base.config`) to v2 syntax (split the chained assignment to match the `PANORAMA_API_KEY` block right below it; move/convert `check_max`), then drop the `NXF_SYNTAX_PARSER=v1` export from `tests/run-stub-tests.sh`. Until then, don't add more v1-only config idioms.
+
+**Evaluate nf-test as a future upgrade.** The current harness (`tests/run-stub-tests.sh`) is a deliberately minimal bash wrapper: it asserts exit code + presence/absence of published files, nothing finer-grained. [nf-test](https://www.nf-test.com/) is the idiomatic Nextflow framework (per-process/per-workflow stub tests, snapshot assertions) and is the intended next step when richer assertions are wanted — it was considered and deferred, not rejected. If you migrate, keep the both-dispatch-modes coverage the bash harness provides.
 
 **`limelight_upload = true` silently requires every Limelight `val` param to be set.** Nextflow rejects any `val` input that evaluates to `null`, but there is no upfront validation — Comet, Percolator, and the Limelight XML conversion will all run first, then the upload fails with a misleading message like `A process input channel evaluates to null -- Invalid declaration 'val tags'`. The full required set when `limelight_upload = true` is: `limelight_webapp_url`, `limelight_project_id`, `limelight_search_description`, `limelight_search_short_name`, **and** `limelight_tags` (despite the latter being documented as optional). If you touch the upload modules, preserve this requirement set in any test config — and consider whether the upload modules should accept null tags explicitly.
 
