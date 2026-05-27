@@ -40,7 +40,7 @@ Below is a complete description of all parameters that may be included in these 
 
     .. code-block:: bash
 
-        quant_spectra_dir= 'https://panoramaweb.org/_webdav/path/to/@files/RawFiles/'
+        spectra_dir = 'https://panoramaweb.org/_webdav/path/to/@files/RawFiles/'
 
 
     Where, ``https://panoramaweb.org/_webdav/path/to/@files/RawFiles/`` is the WebDav URL of the folder on the Panorama server.

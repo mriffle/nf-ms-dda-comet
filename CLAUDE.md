@@ -139,6 +139,4 @@ When you need to change one of these things, change it *only* here:
 
 **Stray project name in `nextflow.config:1-5`.** The repo, Read the Docs URL, manifest, and Sphinx project are all `nf-ms-dda-comet`. The one remaining inconsistency is a docstring header at the top of `nextflow.config` that opens with `# Parameters for nf-maccoss-trex` — leftover from an earlier name. It has no functional effect; fix it if you're editing nearby, but don't introduce a new third name.
 
-**Documentation drift in `docs/source/results.rst`.** It describes an `ADD_FASTA_TO_COMET_PARAMS` step and `comet.fasta.params` output that were removed in commit `2575527`, and references `combined.filtered.pout.xml` when the actual output is `combined.pout.xml`. `docs/source/workflow_parameters.rst` shows a sample WebDAV parameter named `quant_spectra_dir` that should be `spectra_dir`. Fix these if you're editing nearby content; otherwise, be aware that prose in `docs/` may not reflect current behavior.
-
 **No CI, no test harness.** The only protection against regressions is `-stub-run` for wiring and a manual smoke run against `test-data/`. Run both before declaring a non-trivial change done.
