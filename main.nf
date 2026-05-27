@@ -114,10 +114,26 @@ workflow {
         }
     }
 
+    // User-supplied (-c) config files to attach to the Limelight upload, so the
+    // exact run configuration is recorded with the search. Exclude the configs
+    // Nextflow auto-loads (the bundled nextflow.config, a launch-dir
+    // nextflow.config, and ~/.nextflow/config) — only files the user explicitly
+    // passed should be uploaded. The upload process sanitizes them (smtp
+    // credentials) before attaching.
+    auto_loaded_configs = [
+        file("${projectDir}/nextflow.config"),
+        file("${launchDir}/nextflow.config"),
+        file("${System.getProperty('user.home')}/.nextflow/config"),
+    ].collect { it.toAbsolutePath().normalize().toString() }
+
+    limelight_config_files = workflow.configFiles
+        .collect { file(it) }
+        .findAll { !(it.toAbsolutePath().normalize().toString() in auto_loaded_configs) }
+
     if(Utils.asBool(params.process_separately)) {
-        wf_comet_separate_percolator(spectra_files_ch, comet_params, fasta, from_raw_files, limelight_secret_id)
+        wf_comet_separate_percolator(spectra_files_ch, comet_params, fasta, from_raw_files, limelight_secret_id, limelight_config_files)
     } else {
-        wf_comet_combined_percolator(spectra_files_ch, comet_params, fasta, from_raw_files, limelight_secret_id)
+        wf_comet_combined_percolator(spectra_files_ch, comet_params, fasta, from_raw_files, limelight_secret_id, limelight_config_files)
     }
 
     workflow.onComplete {

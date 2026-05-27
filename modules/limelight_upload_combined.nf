@@ -13,6 +13,7 @@ process UPLOAD_TO_LIMELIGHT_COM {
         path limelight_xml
         path mzml_files
         path fasta
+        path config_files
         val webapp_url
         val project_id
         val search_long_name
@@ -33,8 +34,19 @@ process UPLOAD_TO_LIMELIGHT_COM {
 
     scans_param = "--scan-file=${(mzml_files as List).join(' --scan-file=')}"
 
+    // Attach the user-supplied config file(s), with smtp credentials redacted
+    // (sed replaces the staged symlink with a sanitized copy; the original on
+    // disk is untouched).
+    config_names = config_files ? (config_files as List).collect { it.name } : []
+    add_file_params = config_names.collect { "--add-file=\"${it}\"" }.join(' ')
+    sanitize_configs = config_names.collect {
+        "sed -i -E -e \"s/smtp\\.password\\s*=\\s*'[^']*'/smtp.password = 'PASSWORD HIDDEN'/g\" -e \"s/smtp\\.user\\s*=\\s*'[^']*'/smtp.user = 'USER HIDDEN'/g\" \"${it}\""
+    }.join('\n    ')
+
     """
     ${AwsSecrets.fetchScript('LIMELIGHT_SUBMIT_UPLOAD_KEY', aws_secret_id, params.aws_region, task.executor)}
+
+    ${sanitize_configs}
 
     echo "Submitting search results for Limelight import..."
         ${exec_java_command(task.memory)} \
@@ -48,6 +60,7 @@ process UPLOAD_TO_LIMELIGHT_COM {
         --search-short-label="${search_short_name}" \
         --path="${workflow.launchDir}" \
         ${scans_param} \
+        ${add_file_params} \
         ${tags_param} \
         > >(tee "limelight-submit-upload.stdout") 2> >(tee "limelight-submit-upload.stderr" >&2)
     echo "Done!" # Needed for proper exit

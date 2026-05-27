@@ -15,6 +15,7 @@ workflow wf_comet_combined_percolator {
         fasta
         from_raw_files
         limelight_secret_id
+        limelight_config_files
 
     main:
 
@@ -55,6 +56,7 @@ workflow wf_comet_combined_percolator {
                 CONVERT_TO_LIMELIGHT_XML_COM.out.limelight_xml,
                 mzml_file_ch.map { it[1] }.collect(),
                 fasta,
+                limelight_config_files,
                 params.limelight_webapp_url,
                 params.limelight_project_id,
                 params.limelight_search_description,

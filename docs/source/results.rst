@@ -93,6 +93,8 @@ Percolator is run once per input scan file. The ``.pin`` files are *not* combine
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 This directory holds logs related to Limelight XML conversion and uploading to Limelight. It will only be present if ``limelight_upload`` is set to ``true``.
 
+Any configuration files you pass on the command line with ``-c`` are attached to the uploaded search so the exact run configuration is recorded in Limelight. Before upload, ``smtp.user`` and ``smtp.password`` values in these files are redacted, so mail credentials are never sent. The pipeline's bundled ``nextflow.config`` and your ``~/.nextflow/config`` are not uploaded.
+
 **Combined mode (default,** ``process_separately = false`` **)**
 
 A single Limelight XML file is generated from the combined Percolator results and a single search is uploaded:
