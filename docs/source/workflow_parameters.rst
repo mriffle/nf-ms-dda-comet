@@ -145,6 +145,24 @@ These parameters describe the capability of your local computer for running the 
      - ``params.panorama_cache_directory``
      - If the RAW files to be processed are in PanoramaWeb, the RAW files will be downloaded to and cached in this directory for future use.
 
+The ``aws`` profile (AWS Batch)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Run with ``-profile aws`` to execute on AWS Batch. In addition to the executor,
+queue, and S3 cache locations, this profile sets ``params.aws_region``:
+
+.. list-table:: Additional parameters for the ``profiles/aws`` section
+   :widths: 5 20 75
+   :header-rows: 1
+
+   * - Req?
+     - Parameter Name
+     - Description
+   * - ✓
+     - ``params.aws_region``
+     - The AWS region of your Batch + Secrets Manager. When downloading from
+       PanoramaWeb or uploading to Limelight on Batch, the API key is bridged
+       through AWS Secrets Manager in this region. See :doc:`set_up_aws`.
+
 The ``mail`` Section
 ^^^^^^^^^^^^^^^^^^^^^^^
 This is a more advanced and entirely optional set of parameters. When the workflow completes, it can optionally send an email to the address specified above in the ``params`` section.

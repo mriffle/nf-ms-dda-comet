@@ -7,11 +7,18 @@
 #   - spectra file count:   1 file  vs  3 files
 #   - dispatch mode:        combined (process_separately=false) vs separate (true)
 #   - Limelight upload:     off vs on
-# = 16 cases. For each, asserts exit 0 plus the *published* files that prove the
-# wiring did the right thing for that combination. The presence/absence checks
-# are what catch the silent combined-vs-separate divergence CLAUDE.md warns
-# about, that COMET fans out per input file, and that the raw path runs
-# MSCONVERT (mzML into the cache) while the mzML path skips it.
+# = 16 cases, plus AWS-profile cases below. For each, asserts exit 0 plus the
+# *published* files that prove the wiring did the right thing for that
+# combination. The presence/absence checks are what catch the silent
+# combined-vs-separate divergence CLAUDE.md warns about, that COMET fans out per
+# input file, and that the raw path runs MSCONVERT (mzML into the cache) while
+# the mzML path skips it.
+#
+# Secret availability: the secret-consuming process stubs begin with a
+# `: "${SECRET:?...}"` guard, so any upload case that exited 0 also proves the
+# secret was injected into that process's environment (via the `secret`
+# directive on the local executor). This does NOT cover the AWS Batch fetch
+# path, which forces executor=local here and is never really executed.
 #
 # Usage:  tests/run-stub-tests.sh
 # Needs:  Java + Nextflow. No Docker, no secrets.
@@ -42,16 +49,17 @@ mkdir -p "$NXF_HOME"
 # Migrating the config to v2 syntax is a tracked follow-up — see CLAUDE.md §6.
 export NXF_SYNTAX_PARSER=v1
 
-# nextflow.config resolves SecretsLoader at parse time, so these secrets must
-# exist even for stub runs (CLAUDE.md §6 footgun) — otherwise the config fails
-# with a misleading "Unknown config attribute `secret_value`". Set placeholders
-# only when absent; never clobber a real value.
+# Secrets are now required only by the processes that declare the `secret`
+# directive, and only when they actually run. Of the processes our matrix
+# exercises, only the Limelight upload + AWS Limelight-bridge stubs run (upload
+# cases), so only this key must exist in the store. PANORAMA_API_KEY is NOT
+# seeded — no test runs a Panorama process — which proves it is not required
+# for non-Panorama runs. Set the placeholder only when absent; never clobber.
 ensure_secret() {
     if ! "$NEXTFLOW" secrets list 2>/dev/null | grep -qw "$1"; then
         "$NEXTFLOW" secrets set "$1" stub-placeholder >/dev/null 2>&1 || true
     fi
 }
-ensure_secret PANORAMA_API_KEY
 ensure_secret LIMELIGHT_SUBMIT_UPLOAD_KEY
 
 WORK_ROOT="$(mktemp -d)"
@@ -120,9 +128,9 @@ assert_msconvert_skipped() {  # <cache_dir>
     fi
 }
 
-# run_case <name> <nfiles> <separately:true|false> <upload:true|false> <input_type:mzml|raw>
+# run_case <name> <nfiles> <separately> <upload> <input_type:mzml|raw> [profile]
 run_case() {
-    local name="$1" nfiles="$2" separately="$3" upload="$4" input_type="$5"
+    local name="$1" nfiles="$2" separately="$3" upload="$4" input_type="$5" profile="${6:-}"
     current_case="$name"
     local dir="$WORK_ROOT/$name"
     local spectra="$dir/spectra" results="$dir/results" cache="$dir/cache"
@@ -134,10 +142,13 @@ run_case() {
 
     local args=(--process_separately "$separately")
     [[ "$upload" == "true" ]] && args+=("${LIMELIGHT_ARGS[@]}")
+    local profile_args=()
+    [[ -n "$profile" ]] && profile_args=(-profile "$profile")
 
-    echo "=== $name  (input=$input_type, files=$nfiles, separate=$separately, upload=$upload) ==="
+    echo "=== $name  (input=$input_type, files=$nfiles, separate=$separately, upload=$upload, profile=${profile:-default}) ==="
     if "$NEXTFLOW" -log "$dir/.nextflow.log" run main.nf -stub-run \
         -c tests/stub.config \
+        "${profile_args[@]}" \
         --fasta test-data/test.fasta \
         --spectra_dir "$spectra" \
         --comet_params test-data/comet.params \
@@ -198,9 +209,20 @@ run_case() {
         # No upload requested → nothing published under limelight/.
         assert_absent "$results" "limelight"
     fi
+
+    # AWS Secrets Manager bridge: runs ONLY under -profile aws and ONLY for a
+    # secret the run actually needs. Our inputs are local files (no Panorama),
+    # so only the Limelight bridge should appear, and only when uploading.
+    if [[ "$profile" == "aws" && "$upload" == "true" ]]; then
+        assert_file   "$results" "aws/aws-setup-LIMELIGHT_SUBMIT_UPLOAD_KEY.stdout"
+        assert_absent "$results" "aws/aws-setup-PANORAMA_API_KEY.stdout"
+    else
+        assert_absent "$results" "aws"
+    fi
 }
 
-# Full matrix: input type × file count × dispatch mode × upload = 16 cases.
+# Full matrix: input type × file count × dispatch mode × upload = 16 cases
+# (default profile, no AWS bridge).
 for input_type in mzml raw; do
     for nfiles in 1 3; do
         for separately in false true; do
@@ -213,6 +235,15 @@ for input_type in mzml raw; do
         done
     done
 done
+
+# AWS-path cases (-profile aws): exercise GET_AWS_USER_ID + BUILD_AWS_LIMELIGHT_SECRET
+# and the limelight_secret_id threading into the upload. The no-upload case
+# verifies the bridge does NOT run when no secret is needed.
+#         name                          files separate upload input profile
+run_case  "aws_combined_upload"           1   false    true   mzml  aws
+run_case  "aws_separate_upload"           1   true     true   mzml  aws
+run_case  "aws_separate_upload_n3"        3   true     true   mzml  aws
+run_case  "aws_combined_noupload"         1   false    false  mzml  aws
 
 echo
 if [[ $failures -eq 0 ]]; then

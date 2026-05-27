@@ -13,7 +13,8 @@ workflow wf_comet_separate_percolator {
         comet_params
         fasta
         from_raw_files
-    
+        limelight_secret_id
+
     main:
 
         // convert raw files to mzML files if necessary
@@ -67,6 +68,7 @@ workflow wf_comet_separate_percolator {
                 params.limelight_search_description,
                 params.limelight_search_short_name,
                 params.limelight_tags,
+                limelight_secret_id,
             )
         }
 

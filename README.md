@@ -68,8 +68,12 @@ modules/
   panorama.nf                    Four PanoramaWeb processes: GET_FASTA,
                                  GET_COMET_PARAMS, GET_RAW_FILE_LIST, GET_RAW_FILE.
                                  GET_RAW_FILE uses storeDir for download caching.
+  aws.nf                         AWS Secrets Manager bridge (GET_AWS_USER_ID,
+                                 BUILD_AWS_{PANORAMA,LIMELIGHT}_SECRET) for secrets
+                                 on AWS Batch. See CLAUDE.md §4.9.
 
 lib/EmailTemplate.groovy         Builds the workflow.onComplete email body.
+lib/AwsSecrets.groovy            Secret-id + Batch-fetch helpers for the AWS bridge.
 assets/email_template.html       GSP-style HTML template used by EmailTemplate.
 
 resources/
@@ -143,15 +147,20 @@ docs/                            Sphinx documentation source (published to
 
 ## Secrets and External Services
 
-`nextflow.config` loads two secrets from `nextflow.secret` and re-exports them into the
-process environment (so they reach AWS Batch tasks, which don't natively honor
-`nextflow.secret`):
+Two secrets are consumed via Nextflow's native `secret` directive, declared on the
+processes that use them — so each is required **only when that process actually runs**
+(set with `nextflow secrets set ...`):
 
-- `PANORAMA_API_KEY` — used by all `PANORAMA_GET_*` processes.
-- `LIMELIGHT_SUBMIT_UPLOAD_KEY` — used by `UPLOAD_TO_LIMELIGHT_*`.
+- `PANORAMA_API_KEY` — declared on the `PANORAMA_GET_*` processes; needed only when an
+  input is a PanoramaWeb (`https://`) URL.
+- `LIMELIGHT_SUBMIT_UPLOAD_KEY` — declared on `UPLOAD_TO_LIMELIGHT_*`; needed only when
+  `limelight_upload = true`.
 
-Both must be set with `nextflow secrets set ...` before running. The user docs walk
-through how to obtain them.
+The native directive isn't honored on **AWS Batch**. So on the `aws` profile, a local
+bridge (`modules/aws.nf` + `lib/AwsSecrets.groovy`) reads each needed key and stores it
+in AWS Secrets Manager (per-user id); Batch tasks fetch it back at runtime. This is
+gated in `main.nf` and runs only when the feature is used. See CLAUDE.md §4.9 and the
+docs (`set_up_aws`) for details. Nothing is loaded in `nextflow.config`.
 
 ## Execution Profiles
 

@@ -8,10 +8,12 @@ def exec_java_command(mem) {
 process PANORAMA_GET_RAW_FILE_LIST {
     label 'process_low_constant'
     container params.images.panorama_client
+    secret 'PANORAMA_API_KEY'
     publishDir "${params.result_dir}/panorama", failOnError: true, mode: 'copy'
 
     input:
         each web_dav_url
+        val aws_secret_id
 
     output:
         tuple val(web_dav_url), path("*.download"), emit: raw_file_placeholders
@@ -20,6 +22,8 @@ process PANORAMA_GET_RAW_FILE_LIST {
 
     script:
     """
+    ${AwsSecrets.fetchScript('PANORAMA_API_KEY', aws_secret_id, params.aws_region, task.executor)}
+
     echo "Running file list from Panorama..."
         ${exec_java_command(task.memory)} \
         -l \
@@ -35,6 +39,7 @@ process PANORAMA_GET_RAW_FILE_LIST {
 
     stub:
     """
+    : "\${PANORAMA_API_KEY:?PANORAMA_API_KEY not available to process}"
     touch panorama-get-files.stdout
     touch panorama-get-files.stderr
     touch raw_file_stub_1.raw.download
@@ -45,11 +50,13 @@ process PANORAMA_GET_RAW_FILE_LIST {
 process PANORAMA_GET_FASTA {
     label 'process_low_constant'
     container params.images.panorama_client
+    secret 'PANORAMA_API_KEY'
     publishDir "${params.result_dir}/panorama", failOnError: true, mode: 'copy', pattern: "*.stdout"
     publishDir "${params.result_dir}/panorama", failOnError: true, mode: 'copy', pattern: "*.stderr"
 
     input:
         val web_dav_dir_url
+        val aws_secret_id
 
     output:
         path("${file(web_dav_dir_url).name}"), emit: panorama_file
@@ -59,6 +66,8 @@ process PANORAMA_GET_FASTA {
     script:
         file_name = file(web_dav_dir_url).name
         """
+        ${AwsSecrets.fetchScript('PANORAMA_API_KEY', aws_secret_id, params.aws_region, task.executor)}
+
         echo "Downloading ${file_name} from Panorama..."
             ${exec_java_command(task.memory)} \
             -d \
@@ -71,6 +80,7 @@ process PANORAMA_GET_FASTA {
     stub:
     file_name = file(web_dav_dir_url).name
     """
+    : "\${PANORAMA_API_KEY:?PANORAMA_API_KEY not available to process}"
     touch "${file_name}"
     touch "panorama-get-${file_name}.stdout"
     touch "panorama-get-${file_name}.stderr"
@@ -80,11 +90,13 @@ process PANORAMA_GET_FASTA {
 process PANORAMA_GET_COMET_PARAMS {
     label 'process_low_constant'
     container params.images.panorama_client
+    secret 'PANORAMA_API_KEY'
     publishDir "${params.result_dir}/panorama", failOnError: true, mode: 'copy', pattern: "*.stdout"
     publishDir "${params.result_dir}/panorama", failOnError: true, mode: 'copy', pattern: "*.stderr"
 
     input:
         val web_dav_dir_url
+        val aws_secret_id
 
     output:
         path("${file(web_dav_dir_url).name}"), emit: panorama_file
@@ -94,6 +106,8 @@ process PANORAMA_GET_COMET_PARAMS {
     script:
         file_name = file(web_dav_dir_url).name
         """
+        ${AwsSecrets.fetchScript('PANORAMA_API_KEY', aws_secret_id, params.aws_region, task.executor)}
+
         echo "Downloading ${file_name} from Panorama..."
             ${exec_java_command(task.memory)} \
             -d \
@@ -106,6 +120,7 @@ process PANORAMA_GET_COMET_PARAMS {
     stub:
     file_name = file(web_dav_dir_url).name
     """
+    : "\${PANORAMA_API_KEY:?PANORAMA_API_KEY not available to process}"
     touch "${file_name}"
     touch "panorama-get-${file_name}.stdout"
     touch "panorama-get-${file_name}.stderr"
@@ -115,10 +130,12 @@ process PANORAMA_GET_COMET_PARAMS {
 process PANORAMA_GET_RAW_FILE {
     label 'process_low_constant'
     container params.images.panorama_client
+    secret 'PANORAMA_API_KEY'
     storeDir "${params.panorama_cache_directory}"
 
     input:
         tuple val(web_dav_dir_url), path(download_file_placeholder)
+        val aws_secret_id
 
     output:
         path("${download_file_placeholder.baseName}"), emit: panorama_file
@@ -128,6 +145,8 @@ process PANORAMA_GET_RAW_FILE {
     script:
         raw_file_name = download_file_placeholder.baseName
         """
+        ${AwsSecrets.fetchScript('PANORAMA_API_KEY', aws_secret_id, params.aws_region, task.executor)}
+
         echo "Downloading ${raw_file_name} from Panorama..."
             ${exec_java_command(task.memory)} \
             -d \
@@ -140,6 +159,7 @@ process PANORAMA_GET_RAW_FILE {
     stub:
     raw_file_name = download_file_placeholder.baseName
     """
+    : "\${PANORAMA_API_KEY:?PANORAMA_API_KEY not available to process}"
     touch "${raw_file_name}"
     touch "panorama-get-${raw_file_name}.stdout"
     touch "panorama-get-${raw_file_name}.stderr"

@@ -7,6 +7,7 @@ process UPLOAD_TO_LIMELIGHT_SEP {
     publishDir "${params.result_dir}/limelight", failOnError: true, mode: 'copy'
     label 'process_low'
     container params.images.limelight_upload
+    secret 'LIMELIGHT_SUBMIT_UPLOAD_KEY'
 
     input:
         tuple val(sample_id), path(mzml_file), path(limelight_xml)
@@ -16,6 +17,7 @@ process UPLOAD_TO_LIMELIGHT_SEP {
         val search_long_name
         val search_short_name
         val tags
+        val aws_secret_id
 
     output:
         path("*.stdout"), emit: stdout
@@ -29,6 +31,8 @@ process UPLOAD_TO_LIMELIGHT_SEP {
     }
 
     """
+    ${AwsSecrets.fetchScript('LIMELIGHT_SUBMIT_UPLOAD_KEY', aws_secret_id, params.aws_region, task.executor)}
+
     echo "Submitting search results for Limelight import (${sample_id})..."
         ${exec_java_command(task.memory)} \
         --retry-count-limit=5 \
@@ -47,6 +51,7 @@ process UPLOAD_TO_LIMELIGHT_SEP {
 
     stub:
     """
+    : "\${LIMELIGHT_SUBMIT_UPLOAD_KEY:?LIMELIGHT_SUBMIT_UPLOAD_KEY not available to process}"
     touch "${sample_id}.limelight-submit-upload.stdout"
     touch "${sample_id}.limelight-submit-upload.stderr"
     """

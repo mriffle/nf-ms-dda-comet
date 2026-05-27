@@ -35,14 +35,19 @@ Install Nextflow
 ================
 Follow the instructions at: https://www.nextflow.io/docs/latest/getstarted.html. 
 
-Set up placeholder credentials
-==============================
-The workflow currently needs a placeholder value for the secret key for PanoramaWeb to run. Enter the following on the command line where nextflow is being run:
+Credentials
+===========
+You do **not** need to set up any credentials to run the workflow on local files.
+API keys are required only for the features that use them, and only then:
 
-.. code::
-    
-    nextflow secrets set PANORAMA_API_KEY "PLACEHOLDER"
-    nextflow secrets set LIMELIGHT_SUBMIT_UPLOAD_KEY "PLACEHOLDER"
+* a **PanoramaWeb** API key (``PANORAMA_API_KEY``) — only if an input is a PanoramaWeb
+  (``https://``) URL. See *Optional: Set up PanoramaWeb credentials* below.
+* a **Limelight** upload key (``LIMELIGHT_SUBMIT_UPLOAD_KEY``) — only if uploading
+  results to Limelight (``limelight_upload = true``). See *Optional: Set up Limelight
+  credentials* below.
+
+If you skip a feature, its key is never requested. (When running on AWS Batch, these
+keys are additionally bridged through AWS Secrets Manager — see :doc:`set_up_aws`.)
 
 Optional: Set up AWS CLI on local system
 ========================================
