@@ -42,13 +42,6 @@ NEXTFLOW="${NEXTFLOW_BIN:-nextflow}"
 export NXF_HOME="${NXF_HOME:-$REPO_ROOT/.test-tools/nxf-home}"
 mkdir -p "$NXF_HOME"
 
-# nextflow.config is written in legacy (v1) config syntax — a chained
-# assignment (line 57) and a check_max() function def — that Nextflow 26's
-# strict default parser rejects. Force the legacy parser so the suite runs the
-# pipeline on both 25 and 26 engines. (v1 is already the default on 25.)
-# Migrating the config to v2 syntax is a tracked follow-up — see CLAUDE.md §6.
-export NXF_SYNTAX_PARSER=v1
-
 # Secrets are now required only by the processes that declare the `secret`
 # directive, and only when they actually run. Of the processes our matrix
 # exercises, only the Limelight upload + AWS Limelight-bridge stubs run (upload

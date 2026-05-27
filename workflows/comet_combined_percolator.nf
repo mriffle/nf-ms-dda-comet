@@ -37,17 +37,17 @@ workflow wf_comet_combined_percolator {
         combined_pin_tuple = Channel.of("combined").combine(COMBINE_PIN_FILES.out.combined_pin)
         PERCOLATOR(
             combined_pin_tuple,
-            params.limelight_import_decoys
+            Utils.asBool(params.limelight_import_decoys)
         )
 
-        if (params.limelight_upload) {
+        if (Utils.asBool(params.limelight_upload)) {
 
             CONVERT_TO_LIMELIGHT_XML_COM(
                 COMET.out.pepxml.map { it[1] }.collect(), 
                 PERCOLATOR.out.pout.map { it[1] },
                 fasta, 
                 comet_params,
-                params.limelight_import_decoys,
+                Utils.asBool(params.limelight_import_decoys),
                 params.limelight_entrapment_prefix ? params.limelight_entrapment_prefix : false
             )
 

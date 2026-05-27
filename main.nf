@@ -24,7 +24,7 @@ workflow {
     needs_panorama = params.fasta.startsWith("https://") ||
                      params.comet_params.startsWith("https://") ||
                      params.spectra_dir.contains("https://")
-    needs_limelight = params.limelight_upload
+    needs_limelight = Utils.asBool(params.limelight_upload)
     on_aws = workflow.profile.tokenize(',').contains('aws')
 
     // On AWS Batch the native `secret` directive isn't honored, so bridge the
@@ -85,10 +85,10 @@ workflow {
         spectra_dir = file(params.spectra_dir, checkIfExists: true)
 
         // get our mzML files
-        mzml_files = file("$spectra_dir/*.mzML")
+        mzml_files = files("$spectra_dir/*.mzML")
 
         // get our raw files
-        raw_files = file("$spectra_dir/*.raw")
+        raw_files = files("$spectra_dir/*.raw")
 
         if(mzml_files.size() < 1 && raw_files.size() < 1) {
             error "No raw or mzML files found in: $spectra_dir"
@@ -103,12 +103,19 @@ workflow {
         }
     }
 
-    if(params.process_separately) {
+    if(Utils.asBool(params.process_separately)) {
         wf_comet_separate_percolator(spectra_files_ch, comet_params, fasta, from_raw_files, limelight_secret_id)
     } else {
         wf_comet_combined_percolator(spectra_files_ch, comet_params, fasta, from_raw_files, limelight_secret_id)
     }
 
+    workflow.onComplete {
+        try {
+            email()
+        } catch (Exception e) {
+            println "Warning: Error sending completion email."
+        }
+    }
 }
 
 //
@@ -124,21 +131,5 @@ def email() {
             subject: subject,
             body: msg
         )
-    }
-}
-
-//
-// This is a dummy workflow for testing
-//
-workflow dummy {
-    println "This is a workflow that doesn't do anything."
-}
-
-// Email notifications:
-workflow.onComplete {
-    try {
-        email()
-    } catch (Exception e) {
-        println "Warning: Error sending completion email."
     }
 }

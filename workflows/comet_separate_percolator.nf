@@ -32,10 +32,10 @@ workflow wf_comet_separate_percolator {
 
         PERCOLATOR(
             FILTER_PIN.out.filtered_pin,
-            params.limelight_import_decoys
+            Utils.asBool(params.limelight_import_decoys)
         )
 
-        if (params.limelight_upload) {
+        if (Utils.asBool(params.limelight_upload)) {
 
             // Create paired channel by joining COMET and PERCOLATOR outputs
             // Both outputs have the same sample ID (base name of original raw file)
@@ -49,7 +49,7 @@ workflow wf_comet_separate_percolator {
                 paired_results,
                 fasta, 
                 comet_params,
-                params.limelight_import_decoys,
+                Utils.asBool(params.limelight_import_decoys),
                 params.limelight_entrapment_prefix ? params.limelight_entrapment_prefix : false
             )
 

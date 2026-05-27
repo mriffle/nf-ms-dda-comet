@@ -15,3 +15,7 @@
 /docs/build
 .vscode
 
+# Claude Code runtime state (scheduled-task lock, etc.). Project-shared Claude
+# config under .claude/ (settings, commands, agents) can still be committed.
+/.claude/scheduled_tasks.lock
+

@@ -39,9 +39,10 @@ upstream processes (msconvert, Comet, filter_pin).
 main.nf                          Entry point. Resolves inputs (local vs. PanoramaWeb)
                                  and dispatches to one of two sub-workflows.
 
-nextflow.config                  Pipeline params, secrets loading, execution profiles
-                                 (standard, slurm), report/timeline/trace settings,
-                                 and the check_max() helper from the nf-core template.
+nextflow.config                  Pipeline params, execution profiles (standard, slurm,
+                                 aws), report/timeline/trace settings, and each profile's
+                                 process.resourceLimits map (the cpus/memory/time cap that
+                                 conf/base.config clamps every step to).
 
 container_images.config          Centralized, version-pinned Docker image registry.
                                  Edit here to bump tool versions.
@@ -127,7 +128,8 @@ docs/                            Sphinx documentation source (published to
   version should be a one-line change there.
 - **Resource labels, not hard-coded resources.** Processes apply labels like
   `process_medium` or `process_high_constant`; the actual cpus/memory/time live in
-  `conf/base.config` and scale with `task.attempt` via `check_max()`.
+  `conf/base.config`, scale with `task.attempt`, and are capped at the per-profile
+  maxima by `process.resourceLimits`.
 - **Retry on transient failures.** `errorStrategy` retries on a fixed set of exit codes
   (OOM, signal, etc.) up to 3 times; other failures fail fast.
 - **Caching where it matters.** `MSCONVERT` and `PANORAMA_GET_RAW_FILE` use `storeDir`
