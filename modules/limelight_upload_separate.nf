@@ -1,6 +1,6 @@
 def exec_java_command(mem) {
     def xmx = "-Xmx${mem.toGiga()-1}G"
-    return "java -Djava.aws.headless=true ${xmx} -jar /usr/local/bin/limelightSubmitImport.jar"
+    return "java -Djava.awt.headless=true ${xmx} -jar /usr/local/bin/limelightSubmitImport.jar"
 }
 
 process UPLOAD_TO_LIMELIGHT_SEP {
