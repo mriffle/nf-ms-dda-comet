@@ -63,6 +63,18 @@ cd docs && pip install -r requirements.txt && make html
 # Output: docs/build/html/index.html
 ```
 
+**`-stub-run` still launches Docker containers.** Nextflow doesn't skip containers in stub mode — it just swaps the script body. If Docker isn't available locally (e.g., WSL2 without Docker Desktop integration), supply an override config:
+
+```bash
+cat > /tmp/no-docker.config << 'EOF'
+docker.enabled = false
+process.container = null
+EOF
+nextflow run main.nf -stub-run -c /tmp/no-docker.config --fasta ... --spectra_dir ... --comet_params ...
+```
+
+To also exercise the PanoramaWeb stubs without real network, add `params.mzml_cache_directory` and `params.panorama_cache_directory` overrides pointing at writable local paths, and pass any `https://`-prefixed string for `--fasta` / `--spectra_dir` / `--comet_params` — the URL is parsed by `file().name` but never fetched in stub mode.
+
 Two secrets are read from `nextflow.secret` and re-exported into the process env (see `nextflow.config:56-65`):
 
 ```bash
@@ -98,9 +110,10 @@ Every existing module follows the rules below. New or modified processes must to
 - When you collapse to a single combined artifact (e.g. `COMBINE_PIN_FILES`), use the literal string `"combined"` as the synthetic sample_id so downstream code stays uniform.
 
 ### 4.6 Stub blocks
-- Every process **must** declare a `stub:` block that `touch`es each declared output.
-- The one exception in the current tree is `COMBINE_PIN_FILES`; don't follow its lead, and fix it if you're nearby.
-- `nextflow run -stub-run` is the cheapest way to validate channel wiring after a refactor — make sure it passes before declaring a change done.
+- Every process **must** declare a `stub:` block.
+- The stub must `touch` a file matching **every** path declared in `output:` — primary outputs, `*.stdout`, and `*.stderr` alike. Glob outputs (e.g. `path("*.stderr")`) need at least one matching file; use the same names the real script writes (check the `tee` redirections).
+- For outputs whose path uses a Groovy expression (e.g. `path("${file_name}")`, `path("${sample_id}.pep.xml")`), the variables must be defined in the `stub:` block too — mirror what `script:` does. Pure shell-interpolated `${var}` works only inside the triple-quoted string; if a Groovy local from `script:` is needed, redefine it before the heredoc in `stub:` as well.
+- `nextflow run -stub-run` is the cheapest way to validate channel wiring after a refactor — run it in both modes (default and `--process_separately true`) before declaring a change done.
 
 ### 4.7 Caching vs publishing
 - `storeDir` for cross-run cache (expensive, idempotent steps): `MSCONVERT`, `PANORAMA_GET_RAW_FILE`. Cache paths come from `params.mzml_cache_directory` / `params.panorama_cache_directory`.
@@ -140,3 +153,5 @@ When you need to change one of these things, change it *only* here:
 **Stray project name in `nextflow.config:1-5`.** The repo, Read the Docs URL, manifest, and Sphinx project are all `nf-ms-dda-comet`. The one remaining inconsistency is a docstring header at the top of `nextflow.config` that opens with `# Parameters for nf-maccoss-trex` — leftover from an earlier name. It has no functional effect; fix it if you're editing nearby, but don't introduce a new third name.
 
 **No CI, no test harness.** The only protection against regressions is `-stub-run` for wiring and a manual smoke run against `test-data/`. Run both before declaring a non-trivial change done.
+
+**`limelight_upload = true` silently requires every Limelight `val` param to be set.** Nextflow rejects any `val` input that evaluates to `null`, but there is no upfront validation — Comet, Percolator, and the Limelight XML conversion will all run first, then the upload fails with a misleading message like `A process input channel evaluates to null -- Invalid declaration 'val tags'`. The full required set when `limelight_upload = true` is: `limelight_webapp_url`, `limelight_project_id`, `limelight_search_description`, `limelight_search_short_name`, **and** `limelight_tags` (despite the latter being documented as optional). If you touch the upload modules, preserve this requirement set in any test config — and consider whether the upload modules should accept null tags explicitly.

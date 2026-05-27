@@ -46,5 +46,7 @@ process CONVERT_TO_LIMELIGHT_XML_COM {
     stub:
     """
     touch "results.limelight.xml"
+    touch "limelight-xml-convert.stdout"
+    touch "limelight-xml-convert.stderr"
     """
 }

@@ -48,4 +48,10 @@ process UPLOAD_TO_LIMELIGHT_COM {
         > >(tee "limelight-submit-upload.stdout") 2> >(tee "limelight-submit-upload.stderr" >&2)
     echo "Done!" # Needed for proper exit
     """
+
+    stub:
+    """
+    touch limelight-submit-upload.stdout
+    touch limelight-submit-upload.stderr
+    """
 }

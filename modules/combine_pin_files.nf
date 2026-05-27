@@ -29,5 +29,9 @@ process COMBINE_PIN_FILES {
     echo "DONE!" # Needed for proper exit
     """
 
-
+    stub:
+    """
+    touch combined.filtered.pin
+    touch combine-pin.stderr
+    """
 }

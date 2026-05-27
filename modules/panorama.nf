@@ -35,7 +35,10 @@ process PANORAMA_GET_RAW_FILE_LIST {
 
     stub:
     """
-    touch "panorama_files.txt"
+    touch panorama-get-files.stdout
+    touch panorama-get-files.stderr
+    touch raw_file_stub_1.raw.download
+    touch raw_file_stub_2.raw.download
     """
 }
 
@@ -66,8 +69,11 @@ process PANORAMA_GET_FASTA {
         """
 
     stub:
+    file_name = file(web_dav_dir_url).name
     """
-    touch "{$file(web_dav_dir_url).name}"
+    touch "${file_name}"
+    touch "panorama-get-${file_name}.stdout"
+    touch "panorama-get-${file_name}.stderr"
     """
 }
 
@@ -98,8 +104,11 @@ process PANORAMA_GET_COMET_PARAMS {
         """
 
     stub:
+    file_name = file(web_dav_dir_url).name
     """
-    touch "{$file(web_dav_dir_url).name}"
+    touch "${file_name}"
+    touch "panorama-get-${file_name}.stdout"
+    touch "panorama-get-${file_name}.stderr"
     """
 }
 
@@ -129,7 +138,10 @@ process PANORAMA_GET_RAW_FILE {
         """
 
     stub:
+    raw_file_name = download_file_placeholder.baseName
     """
-    touch "{$download_file_placeholder.baseName}"
+    touch "${raw_file_name}"
+    touch "panorama-get-${raw_file_name}.stdout"
+    touch "panorama-get-${raw_file_name}.stderr"
     """
 }
