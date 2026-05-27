@@ -56,11 +56,12 @@ There is no build or lint step. Tests are stub-only for now (see below). "Runnin
 ./tests/run-stub-tests-all.sh
 
 # Inner stub harness (one Nextflow version — whatever NEXTFLOW_BIN/NXF_VER point
-# at, else `nextflow` on PATH). The canonical wiring check: -stub-run across an
-# 8-case matrix (1 vs 3 spectra files × combined vs separate × Limelight upload
-# on/off) against test-data/, asserting the published outputs that distinguish
-# each combination (per-file COMET fan-out, combined vs per-sample Percolator,
-# single vs per-sample Limelight XML). Multi-file fixtures are generated at
+# at, else `nextflow` on PATH). The canonical wiring check: -stub-run across a
+# 16-case matrix (mzML vs raw input × 1 vs 3 spectra files × combined vs separate
+# × Limelight upload on/off) against test-data/, asserting the published outputs
+# that distinguish each combination (raw runs MSCONVERT into the mzml cache while
+# mzML skips it, per-file COMET fan-out, combined vs per-sample Percolator, single
+# vs per-sample Limelight XML). Fixtures (mzML/raw, 1 or 3 files) are generated at
 # runtime by copying test.mzML — nothing large is committed. No Docker. Uses an
 # isolated NXF_HOME under .test-tools/ and seeds placeholder secrets there, so
 # it neither needs nor touches your real ~/.nextflow. Run after any change to
@@ -165,7 +166,9 @@ When you need to change one of these things, change it *only* here:
 
 **Stray project name in `nextflow.config:1-5`.** The repo, Read the Docs URL, manifest, and Sphinx project are all `nf-ms-dda-comet`. The one remaining inconsistency is a docstring header at the top of `nextflow.config` that opens with `# Parameters for nf-maccoss-trex` — leftover from an earlier name. It has no functional effect; fix it if you're editing nearby, but don't introduce a new third name.
 
-**Tests are stub-only; no real-data CI.** Regression protection has two tiers: the stub harness (`./tests/run-stub-tests-all.sh` → the 8-case matrix of 1 vs 3 files × combined vs separate × upload on/off, run against every Nextflow version in `tests/nextflow-versions.txt`; runs in GitHub Actions on every push, see `.github/workflows/ci.yml`) and a *manual* smoke run against `test-data/` with real tools (Comet/Percolator actually execute — not in CI, requires Docker). The stub harness catches wiring breakage; it does **not** catch logic errors inside a process script, since stub blocks only `touch` outputs. Run the harness before declaring any topology change done, and a manual smoke run before declaring a process-script change done. Setup is in `tests/setup-nextflow.sh`; versions are pinned in `tests/nextflow-versions.txt`.
+**Tests are stub-only; no real-data CI.** Regression protection has two tiers: the stub harness (`tests/run-stub-tests.sh` → a 16-case matrix of mzML vs raw input × 1 vs 3 files × combined vs separate × upload on/off; `tests/run-stub-tests-all.sh` wraps it to run against every version in `tests/nextflow-versions.txt`) and a *manual* smoke run against `test-data/` with real tools (Comet/Percolator actually execute — not in CI, requires Docker). The stub harness catches wiring breakage; it does **not** catch logic errors inside a process script, since stub blocks only `touch` outputs. Run the harness before declaring any topology change done, and a manual smoke run before declaring a process-script change done.
+
+CI (`.github/workflows/ci.yml`) runs the matrix on every push, **one parallel job per Nextflow version** (a `versions` job reads `tests/nextflow-versions.txt` into a job-matrix; `fail-fast: false` so each version reports independently). CI provisions each engine with `nf-core/setup-nextflow` and runs the inner `tests/run-stub-tests.sh`; local dev instead installs all versions via `tests/setup-nextflow.sh` and runs `tests/run-stub-tests-all.sh`. The inner harness and the version list are shared — only the provisioning differs.
 
 **`nextflow.config` only parses under the legacy (v1) config parser.** Nextflow 26 makes its strict config parser the default, and it rejects two things this config relies on: the chained assignment on `nextflow.config:57` (`secret_value = env.X = ...getSecret(...)`) and the `def check_max(...)` function definition (`nextflow.config:141`). The stub harness sidesteps this by exporting `NXF_SYNTAX_PARSER=v1`, so it verifies the pipeline runs on the 26 *engine* — but real users on 26 with default settings will hit a `Config parsing failed` error. **Follow-up not yet done:** migrate `nextflow.config` (and audit `conf/base.config`) to v2 syntax (split the chained assignment to match the `PANORAMA_API_KEY` block right below it; move/convert `check_max`), then drop the `NXF_SYNTAX_PARSER=v1` export from `tests/run-stub-tests.sh`. Until then, don't add more v1-only config idioms.
 

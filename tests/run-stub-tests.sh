@@ -3,13 +3,15 @@
 # Stub-test harness: exercises channel wiring end-to-end with no real tools.
 #
 # Runs `nextflow -stub-run` across a matrix of:
+#   - input type:           mzML (MSCONVERT skipped) vs raw (MSCONVERT runs)
 #   - spectra file count:   1 file  vs  3 files
 #   - dispatch mode:        combined (process_separately=false) vs separate (true)
 #   - Limelight upload:     off vs on
-# = 8 cases. For each, asserts exit 0 plus the *published* files that prove the
+# = 16 cases. For each, asserts exit 0 plus the *published* files that prove the
 # wiring did the right thing for that combination. The presence/absence checks
 # are what catch the silent combined-vs-separate divergence CLAUDE.md warns
-# about, and that COMET fans out per input file.
+# about, that COMET fans out per input file, and that the raw path runs
+# MSCONVERT (mzML into the cache) while the mzML path skips it.
 #
 # Usage:  tests/run-stub-tests.sh
 # Needs:  Java + Nextflow. No Docker, no secrets.
@@ -69,14 +71,15 @@ LIMELIGHT_ARGS=(
     --limelight_tags ci
 )
 
-# make_spectra <dir> <n>  — n copies of test.mzML named sample1..sampleN.mzML
+# make_spectra <dir> <n> <ext>  — n copies of test.mzML named sample1..sampleN.<ext>
 # Stub runs never read spectra content, so copies with distinct basenames
-# (= distinct sample_ids) are enough to exercise per-file fan-out.
+# (= distinct sample_ids) are enough to exercise per-file fan-out. The extension
+# (mzML or raw) is what makes main.nf route to MSCONVERT or not.
 make_spectra() {
-    local dir="$1" n="$2" i
+    local dir="$1" n="$2" ext="$3" i
     mkdir -p "$dir"
     for ((i = 1; i <= n; i++)); do
-        cp test-data/test.mzML "$dir/sample${i}.mzML"
+        cp test-data/test.mzML "$dir/sample${i}.${ext}"
     done
 }
 
@@ -98,24 +101,47 @@ assert_absent() {  # assert_absent <results_dir> <relative-path>
     fi
 }
 
-# run_case <name> <nfiles> <separately:true|false> <upload:true|false>
+# MSCONVERT writes sample.mzML to storeDir (the mzml cache), not result_dir.
+assert_msconvert_ran() {  # <cache_dir> <sample_id>
+    if [[ -f "$1/$2.mzML" ]]; then
+        echo "    ok: MSCONVERT produced $2.mzML"
+    else
+        echo "    FAIL [$current_case]: MSCONVERT output missing from cache: $2.mzML"
+        failures=$((failures + 1))
+    fi
+}
+
+assert_msconvert_skipped() {  # <cache_dir>
+    if compgen -G "$1/*.mzML" >/dev/null 2>&1; then
+        echo "    FAIL [$current_case]: MSCONVERT ran for mzML input (cache holds *.mzML)"
+        failures=$((failures + 1))
+    else
+        echo "    ok: MSCONVERT skipped (mzML input)"
+    fi
+}
+
+# run_case <name> <nfiles> <separately:true|false> <upload:true|false> <input_type:mzml|raw>
 run_case() {
-    local name="$1" nfiles="$2" separately="$3" upload="$4"
+    local name="$1" nfiles="$2" separately="$3" upload="$4" input_type="$5"
     current_case="$name"
     local dir="$WORK_ROOT/$name"
-    local spectra="$dir/spectra" results="$dir/results"
+    local spectra="$dir/spectra" results="$dir/results" cache="$dir/cache"
     mkdir -p "$dir"
-    make_spectra "$spectra" "$nfiles"
+
+    local ext="mzML"
+    [[ "$input_type" == "raw" ]] && ext="raw"
+    make_spectra "$spectra" "$nfiles" "$ext"
 
     local args=(--process_separately "$separately")
     [[ "$upload" == "true" ]] && args+=("${LIMELIGHT_ARGS[@]}")
 
-    echo "=== $name  (files=$nfiles, separate=$separately, upload=$upload) ==="
+    echo "=== $name  (input=$input_type, files=$nfiles, separate=$separately, upload=$upload) ==="
     if "$NEXTFLOW" -log "$dir/.nextflow.log" run main.nf -stub-run \
         -c tests/stub.config \
         --fasta test-data/test.fasta \
         --spectra_dir "$spectra" \
         --comet_params test-data/comet.params \
+        --mzml_cache_directory "$cache" \
         -work-dir "$dir/work" \
         --result_dir "$results" \
         --report_dir "$dir/reports" \
@@ -128,8 +154,18 @@ run_case() {
         return
     fi
 
-    # COMET must fan out to one result per input file, regardless of mode.
+    # Raw input must run MSCONVERT (mzML into the cache, one per file); mzML
+    # input must skip it. Either way COMET sees sampleN and names match below.
     local i
+    if [[ "$input_type" == "raw" ]]; then
+        for ((i = 1; i <= nfiles; i++)); do
+            assert_msconvert_ran "$cache" "sample${i}"
+        done
+    else
+        assert_msconvert_skipped "$cache"
+    fi
+
+    # COMET must fan out to one result per input file, regardless of mode.
     for ((i = 1; i <= nfiles; i++)); do
         assert_file "$results" "comet/sample${i}.pep.xml"
         assert_file "$results" "comet/sample${i}.pin"
@@ -164,15 +200,19 @@ run_case() {
     fi
 }
 
-#         name                       files  separate  upload
-run_case  "n1_combined_noupload"        1   false     false
-run_case  "n1_combined_upload"          1   false     true
-run_case  "n1_separate_noupload"        1   true      false
-run_case  "n1_separate_upload"          1   true      true
-run_case  "n3_combined_noupload"        3   false     false
-run_case  "n3_combined_upload"          3   false     true
-run_case  "n3_separate_noupload"        3   true      false
-run_case  "n3_separate_upload"          3   true      true
+# Full matrix: input type × file count × dispatch mode × upload = 16 cases.
+for input_type in mzml raw; do
+    for nfiles in 1 3; do
+        for separately in false true; do
+            for upload in false true; do
+                mode=combined;  [[ "$separately" == "true" ]] && mode=separate
+                up=noupload;    [[ "$upload" == "true" ]] && up=upload
+                run_case "${input_type}_n${nfiles}_${mode}_${up}" \
+                    "$nfiles" "$separately" "$upload" "$input_type"
+            done
+        done
+    done
+done
 
 echo
 if [[ $failures -eq 0 ]]; then

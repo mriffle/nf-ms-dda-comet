@@ -5,8 +5,28 @@ on:
   pull_request:
 
 jobs:
-  stub-tests:
+  # Turn tests/nextflow-versions.txt (the single source of truth) into a JSON
+  # array so the stub-tests job can fan out one parallel job per version.
+  versions:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.read.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: read
+        run: |
+          matrix=$(grep -vE '^[[:space:]]*(#|$)' tests/nextflow-versions.txt \
+            | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+  stub-tests:
+    needs: versions
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false   # let every version report; don't cancel siblings on first failure
+      matrix:
+        nextflow: ${{ fromJson(needs.versions.outputs.matrix) }}
+    name: stub-tests (nextflow ${{ matrix.nextflow }})
     steps:
       - uses: actions/checkout@v4
 
@@ -16,11 +36,12 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # Installs every version in tests/nextflow-versions.txt into a local,
-      # gitignored .test-tools/ tree — identical to local development.
-      - name: Install Nextflow versions
-        run: ./tests/setup-nextflow.sh
+      - name: Install Nextflow ${{ matrix.nextflow }}
+        uses: nf-core/setup-nextflow@v2
+        with:
+          version: ${{ matrix.nextflow }}
 
-      # Runs the full stub matrix against each installed version.
-      - name: Run stub tests (all Nextflow versions)
-        run: ./tests/run-stub-tests-all.sh
+      # run-stub-tests.sh uses `nextflow` on PATH (the version installed above)
+      # and runs the full 16-case matrix for that one engine.
+      - name: Run stub tests
+        run: ./tests/run-stub-tests.sh
