@@ -72,7 +72,7 @@ LIMELIGHT_ARGS=(
     --limelight_tags ci
 )
 
-# make_spectra <dir> <n> <ext>  — n copies of test.mzML named sample1..sampleN.<ext>
+# make_spectra <dir> <n> <ext>  — n copies of test1.mzML named sample1..sampleN.<ext>
 # Stub runs never read spectra content, so copies with distinct basenames
 # (= distinct sample_ids) are enough to exercise per-file fan-out. The extension
 # (mzML or raw) is what makes main.nf route to MSCONVERT or not.
@@ -80,7 +80,7 @@ make_spectra() {
     local dir="$1" n="$2" ext="$3" i
     mkdir -p "$dir"
     for ((i = 1; i <= n; i++)); do
-        cp test-data/test.mzML "$dir/sample${i}.${ext}"
+        cp test-data/test1.mzML "$dir/sample${i}.${ext}"
     done
 }
 

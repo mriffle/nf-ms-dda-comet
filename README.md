@@ -86,7 +86,7 @@ resources/
   pipeline.config                Template user config file (copied by end users).
   comet.params                   Template Comet params file.
 
-test-data/                       Small mzML + fasta + comet.params for smoke runs.
+test-data/                       Small mzML files + fasta + comet.params for smoke runs.
 
 tests/
   run-stub-tests-all.sh          Runs the inner harness against every pinned
@@ -94,13 +94,18 @@ tests/
   run-stub-tests.sh              Inner harness: -stub-run over a 16-case matrix
                                  (mzML/raw × 1/3 files × combined/separate ×
                                  upload on/off), asserts published outputs. No Docker.
+  run-e2e-tests.sh               E2E smoke harness: runs the REAL workflow with real
+                                 tools (Comet/FILTER_PIN/Percolator in containers) over
+                                 a 4-case matrix (combined/separate × 1/3 mzML files);
+                                 asserts real output content. Needs Docker; no secrets.
   setup-nextflow.sh              Installs the pinned Nextflow versions locally into
                                  .test-tools/ (gitignored). Run once per machine.
-  nextflow-versions.txt          Pinned Nextflow versions the suite runs against.
+  nextflow-versions.txt          Pinned Nextflow versions the stub suite runs against.
   stub.config                    Disables Docker + caps CPU/RAM for stub runs.
+  e2e.config                     Keeps Docker on + caps CPU/RAM for real E2E runs.
 
-.github/workflows/ci.yml         Runs the matrix on every push / PR — one parallel
-                                 job per Nextflow version.
+.github/workflows/ci.yml         Runs the stub matrix (one parallel job per Nextflow
+                                 version) plus a single-engine e2e-smoke job on push / PR.
 
 docs/                            Sphinx documentation source (published to
                                  Read the Docs via .readthedocs.yaml).

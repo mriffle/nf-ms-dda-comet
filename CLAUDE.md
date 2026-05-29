@@ -43,7 +43,7 @@ Three things to internalize:
 
 ## 3. Commands
 
-There is no build or lint step. Tests are stub-only for now (see below). "Running the code for real" means running Nextflow against test data.
+There is no build or lint step. There are two automated tiers (both run in CI): the **stub** harness (channel wiring, no real tools — see below) and the **E2E smoke** harness (the real workflow with real tools in containers). "Running the code for real" means running Nextflow against test data.
 
 ```bash
 # One-time per machine (and after bumping tests/nextflow-versions.txt):
@@ -62,7 +62,7 @@ There is no build or lint step. Tests are stub-only for now (see below). "Runnin
 # that distinguish each combination (raw runs MSCONVERT into the mzml cache while
 # mzML skips it, per-file COMET fan-out, combined vs per-sample Percolator, single
 # vs per-sample Limelight XML). Fixtures (mzML/raw, 1 or 3 files) are generated at
-# runtime by copying test.mzML — nothing large is committed. No Docker. Uses an
+# runtime by copying test1.mzML — nothing large is committed. No Docker. Uses an
 # isolated NXF_HOME under .test-tools/ and seeds placeholder secrets there, so
 # it neither needs nor touches your real ~/.nextflow. Run after any change to
 # channel topology in main.nf or workflows/.
@@ -73,7 +73,19 @@ There is no build or lint step. Tests are stub-only for now (see below). "Runnin
 nextflow run main.nf -stub-run -c tests/stub.config --fasta test-data/test.fasta \
     --spectra_dir test-data --comet_params test-data/comet.params
 
-# Real smoke run against bundled test data (no Limelight upload).
+# E2E smoke harness — runs the REAL workflow with REAL tools (Comet, FILTER_PIN,
+# Percolator in containers) against test-data/, across a 4-case matrix (combined
+# vs separate × 1 vs 3 mzML files). mzML input ONLY — no raw/MSCONVERT, no
+# Panorama, no Limelight (so the heavy pwiz image and the upload/panorama images
+# are never pulled). Asserts exit 0, output files non-empty, AND real-content
+# floors the stub suite can't (Comet made search_hits, Percolator emitted
+# peptides). Needs a working Docker daemon; no secrets. Same NEXTFLOW_BIN/NXF_VER/
+# isolated-NXF_HOME contract as the stub harness. Run before declaring a
+# process-SCRIPT change done (the stub suite only validates wiring).
+./tests/run-e2e-tests.sh
+
+# Manual real run against bundled test data (no Limelight upload) — what the E2E
+# harness wraps, if you want the raw invocation.
 nextflow run main.nf --fasta test-data/test.fasta \
     --spectra_dir test-data --comet_params test-data/comet.params
 
@@ -88,6 +100,8 @@ cd docs && pip install -r requirements.txt && make html
 **`-stub-run` still launches Docker containers.** Nextflow doesn't skip containers in stub mode — it just swaps the script body. `tests/stub.config` disables Docker (`docker.enabled = false`, `process.container = null`) so stub runs work on any host with just Java + Nextflow — that's why CI needs no Docker. It also sets `process.resourceLimits` (the `cpus`/`memory`/`time` cap that clamps every label — COMET's `process_high_constant` would otherwise demand far more cores than a GitHub runner has). **Keep `cpus <= 4` there** — CI runners are small. Pass it with `-c tests/stub.config` whenever Docker isn't available (e.g., WSL2 without Docker Desktop integration); the harness already does.
 
 To also exercise the PanoramaWeb stubs without real network, add `params.mzml_cache_directory` and `params.panorama_cache_directory` overrides pointing at writable local paths, and pass any `https://`-prefixed string for `--fasta` / `--spectra_dir` / `--comet_params` — the URL is parsed by `file().name` but never fetched in stub mode.
+
+**The E2E harness uses `tests/e2e.config`, the real-run mirror of `stub.config`.** Docker stays *enabled* (it runs real containers), the executor is forced `local` with `queueSize = 1`, and `process.resourceLimits` is capped to `cpus: 2, memory: 6.GB` — without that cap the local executor refuses to schedule COMET (`process_high_constant`, 128 cpus) and PERCOLATOR (`process_high_memory`, 40 GB). Same **keep `cpus <= 4`** rule as `stub.config`, and same direct-assignment-not-params reason (§4.2). The content-assertion floors are intentionally `>=1` so they don't flake on Percolator's q-value variance; the harness prints the real counts every run.
 
 Two secrets are read from `nextflow.secret` and re-exported into the process env (see `nextflow.config:56-65`):
 
@@ -185,9 +199,9 @@ When you need to change one of these things, change it *only* here:
 
 **Stray project name in `nextflow.config:1-5`.** The repo, Read the Docs URL, manifest, and Sphinx project are all `nf-ms-dda-comet`. The one remaining inconsistency is a docstring header at the top of `nextflow.config` that opens with `# Parameters for nf-maccoss-trex` — leftover from an earlier name. It has no functional effect; fix it if you're editing nearby, but don't introduce a new third name.
 
-**Tests are stub-only; no real-data CI.** Regression protection has two tiers: the stub harness (`tests/run-stub-tests.sh` → a 16-case matrix of mzML vs raw input × 1 vs 3 files × combined vs separate × upload on/off; `tests/run-stub-tests-all.sh` wraps it to run against every version in `tests/nextflow-versions.txt`) and a *manual* smoke run against `test-data/` with real tools (Comet/Percolator actually execute — not in CI, requires Docker). The stub harness catches wiring breakage; it does **not** catch logic errors inside a process script, since stub blocks only `touch` outputs. (One targeted exception: secret-consuming stubs carry a `: "${SECRET:?}"` guard — §4.6 — so any passing upload case also proves the secret was injected into that process's env on the local/directive path; the AWS Batch fetch path stays unverified.) Run the harness before declaring any topology change done, and a manual smoke run before declaring a process-script change done.
+**Regression protection: two automated tiers (both in CI) + a manual full run.** (1) The **stub** harness (`tests/run-stub-tests.sh` → a 16-case matrix of mzML vs raw input × 1 vs 3 files × combined vs separate × upload on/off; `tests/run-stub-tests-all.sh` wraps it to run against every version in `tests/nextflow-versions.txt`) catches wiring breakage but does **not** catch logic errors inside a process script, since stub blocks only `touch` outputs. (One targeted exception: secret-consuming stubs carry a `: "${SECRET:?}"` guard — §4.6 — so any passing upload case also proves the secret was injected into that process's env on the local/directive path; the AWS Batch fetch path stays unverified.) (2) The **E2E smoke** harness (`tests/run-e2e-tests.sh`, config `tests/e2e.config`) *does* run the real tools (Comet/FILTER_PIN/Percolator execute in containers) across a 4-case matrix — combined vs separate × 1 vs 3 mzML files — and asserts real-content floors. Its scope is deliberately narrow: **mzML input only** (no raw/MSCONVERT path), **no Panorama, no Limelight upload** (those integrations stay wiring-only via the stub suite), loose `>=1` content floors (not exact output), and it needs **Docker** (so it can't run on a Docker-less box like WSL2 without Docker Desktop). What's still unverified by *either* tier: the raw→MSCONVERT path's tool execution, the Panorama download and Limelight upload tool execution, the AWS Batch secret-fetch path, and exact-output correctness. Run the stub harness before declaring any topology change done; run the E2E harness before declaring a process-script change done.
 
-CI (`.github/workflows/ci.yml`) runs the matrix on every push, **one parallel job per Nextflow version** (a `versions` job reads `tests/nextflow-versions.txt` into a job-matrix; `fail-fast: false` so each version reports independently). CI provisions each engine with `nf-core/setup-nextflow` and runs the inner `tests/run-stub-tests.sh`; local dev instead installs all versions via `tests/setup-nextflow.sh` and runs `tests/run-stub-tests-all.sh`. The inner harness and the version list are shared — only the provisioning differs.
+CI (`.github/workflows/ci.yml`) runs the stub matrix on every push, **one parallel job per Nextflow version** (a `versions` job reads `tests/nextflow-versions.txt` into a job-matrix; `fail-fast: false` so each version reports independently). CI provisions each engine with `nf-core/setup-nextflow` and runs the inner `tests/run-stub-tests.sh`; local dev instead installs all versions via `tests/setup-nextflow.sh` and runs `tests/run-stub-tests-all.sh`. The inner harness and the version list are shared — only the provisioning differs. A separate **`e2e-smoke`** job runs `tests/run-e2e-tests.sh` on every push too, but pinned to a **single** engine (26.04.2, hardcoded in the job — not the version matrix) since it needs Docker and exercises real tools; parser-compat across versions is already the stub matrix's job.
 
 **The pipeline now parses under the Nextflow-26 strict (v2) parser — keep it that way.** Nextflow 26 makes its strict config *and* script parsers the default, and the harness runs against 26 with no `NXF_SYNTAX_PARSER` override, so any v2 regression fails CI. The migration that got us here removed every v1-only idiom:
 - **Config (`nextflow.config`, `conf/base.config`):** the `def check_max(...)` helper is gone — resources are capped by `process.resourceLimits` (§4.2) instead. The top-level `def trace_timestamp` is gone — the launch timestamp is computed inline in each `timeline`/`report`/`trace`/`dag` `file` string (so they may differ by up to a second). The v2 parser rejects **any** top-level `def`/function definition or loose statement in config.

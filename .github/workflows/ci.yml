@@ -45,3 +45,31 @@ jobs:
       # and runs the full 16-case matrix for that one engine.
       - name: Run stub tests
         run: ./tests/run-stub-tests.sh
+
+  # Real-tool E2E smoke suite: runs the actual workflow (Comet/FILTER_PIN/
+  # Percolator in containers) against test-data/. Unlike the stub matrix this
+  # needs Docker (preinstalled on ubuntu-latest) and is pinned to a SINGLE
+  # engine — parser differences are already covered by stub-tests above, and
+  # running real tools across every version would just be slower for no gain.
+  e2e-smoke:
+    runs-on: ubuntu-latest
+    name: e2e-smoke (nextflow 26.04.2)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install Nextflow 26.04.2
+        uses: nf-core/setup-nextflow@v2
+        with:
+          version: 26.04.2
+
+      # mzML input only, no Panorama/Limelight, so the heavy pwiz/msconvert and
+      # the upload images are never pulled — only comet, filter-pin, percolator,
+      # and ubuntu. Nextflow pulls them on first run.
+      - name: Run E2E smoke tests
+        run: ./tests/run-e2e-tests.sh

@@ -1,18 +1,22 @@
-# comet_version 2021.01 rev. 0
+# comet_version 2023.01 rev. 2 (7c9150d)
 # Comet MS/MS search engine parameters file.
 # Everything following the '#' symbol is treated as a comment.
 
-database_name = test.fasta
-decoy_search = 1                       # 0=no (default), 1=concatenated search, 2=separate search
+# If using as part of Nextflow DDA workflow:
+# Do not change settings in sections marked "DO NOT CHANGE", these settings
+# are necessary for workflow compatibility.
+
+# DO NOT CHANGE, NECESSARY FOR WORKFLOW COMPATIBILITY
+database_name = _REPLACED_BY_WORKFLOW_
+decoy_search = 1                       # 0=no (default), 1=internal decoy concatenated, 2=internal decoy separate
 peff_format = 0                        # 0=no (normal fasta, default), 1=PEFF PSI-MOD, 2=PEFF Unimod
 peff_obo =                             # path to PSI Mod or Unimod OBO file
-
-num_threads = 2                        # 0=poll CPU to set num threads; else specify num threads directly (max 128)
+num_threads = 0                        # 0=poll CPU to set num threads; else specify num threads directly (max 128)
 
 #
 # masses
 #
-peptide_mass_tolerance = 25.00
+peptide_mass_tolerance = 20.00
 peptide_mass_units = 2                 # 0=amu, 1=mmu, 2=ppm
 mass_type_parent = 1                   # 0=average masses, 1=monoisotopic masses
 mass_type_fragment = 1                 # 0=average masses, 1=monoisotopic masses
@@ -25,7 +29,7 @@ isotope_error = 3                      # 0=off, 1=0/1 (C13 error), 2=0/1/2, 3=0/
 search_enzyme_number = 1               # choose from list at end of this params file
 search_enzyme2_number = 0              # second enzyme; set to 0 if no second enzyme
 num_enzyme_termini = 2                 # 1 (semi-digested), 2 (fully digested, default), 8 C-term unspecific , 9 N-term unspecific
-allowed_missed_cleavage = 3            # maximum value is 5; for enzyme search
+allowed_missed_cleavage = 2            # maximum value is 5; for enzyme search
 
 #
 # Up to 9 variable modifications are supported
@@ -33,7 +37,7 @@ allowed_missed_cleavage = 3            # maximum value is 5; for enzyme search
 #     e.g. 79.966331 STY 0 3 -1 0 0 97.976896
 #
 variable_mod01 = 15.9949 M 0 3 -1 0 0 0.0
-variable_mod02 = 79.966331 STY 0 3 -1 0 0 0.0
+variable_mod02 = 0.0 X 0 3 -1 0 0 0.0
 variable_mod03 = 0.0 X 0 3 -1 0 0 0.0
 variable_mod04 = 0.0 X 0 3 -1 0 0 0.0
 variable_mod05 = 0.0 X 0 3 -1 0 0 0.0
@@ -43,6 +47,7 @@ variable_mod08 = 0.0 X 0 3 -1 0 0 0.0
 variable_mod09 = 0.0 X 0 3 -1 0 0 0.0
 max_variable_mods_in_peptide = 5
 require_variable_mod = 0
+scale_fragmentNL = 0                   # 0=no, 1=yes; fragment neutral loss mass is multipled by number of modified residues in the fragment
 
 #
 # fragment ions
@@ -64,6 +69,7 @@ use_NL_ions = 0                        # 0=no, 1=yes to consider NH3/H2O neutral
 
 #
 # output
+# DO NOT CHANGE, NECESSARY FOR WORKFLOW COMPATIBILITY
 #
 output_sqtfile = 0                     # 0=no, 1=yes  write sqt file
 output_txtfile = 0                     # 0=no, 1=yes  write tab-delimited txt file
@@ -95,7 +101,7 @@ max_duplicate_proteins = 20            # maximum number of additional duplicate 
 max_fragment_charge = 3                # set maximum fragment charge state to analyze (allowed max 5)
 max_precursor_charge = 6               # set maximum precursor charge state to analyze (allowed max 9)
 nucleotide_reading_frame = 0           # 0=proteinDB, 1-6, 7=forward three, 8=reverse three, 9=all six
-clip_nterm_methionine = 0              # 0=leave sequences as-is; 1=also consider sequence w/o N-term methionine
+clip_nterm_methionine = 0              # 0=leave protein sequences as-is; 1=also consider sequence w/o N-term methionine
 spectrum_batch_size = 15000            # max. # of spectra to search at a time; 0 to search the entire scan range in one loop
 decoy_prefix = DECOY_                  # decoy entries are denoted by this string which is pre-pended to each protein accession
 equal_I_and_L = 1                      # 0=treat I and L as different; 1=treat I and L as same
@@ -164,4 +170,3 @@ add_Z_user_amino_acid = 0.0000         # added to Z - avg.   0.0000, mono.   0.0
 9.  PepsinA                1      FL          P
 10. Chymotrypsin           1      FWYL        P
 11. No_cut                 1      @           @
-
