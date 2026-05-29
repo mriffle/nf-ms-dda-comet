@@ -43,9 +43,22 @@ Three things to internalize:
 
 ## 3. Commands
 
-There is no build or lint step. There are two automated tiers (both run in CI): the **stub** harness (channel wiring, no real tools — see below) and the **E2E smoke** harness (the real workflow with real tools in containers). "Running the code for real" means running Nextflow against test data.
+There is no build step. **Lint with `nextflow lint` (static strict-parser check, see the lint block below) before declaring ANY change done** — it catches v2-parser regressions, deprecated idioms, and unused vars without launching anything. It is a fast local gate and is *not* wired into CI (the `lib/` false positives below would make it red). Beyond that there are two automated tiers (both run in CI): the **stub** harness (channel wiring, no real tools — see below) and the **E2E smoke** harness (the real workflow with real tools in containers). "Running the code for real" means running Nextflow against test data.
 
 ```bash
+# Static lint of all .nf / .config files (strict v2 parser). No Docker, no
+# engine setup, nothing launched. Run before declaring ANY change done.
+nextflow lint -exclude .test-tools -o concise .
+
+# KNOWN FALSE POSITIVES — do NOT act on these. The linter reports the three
+# lib/*.groovy classes — `Utils`, `EmailTemplate`, `AwsSecrets` — as
+# "is not defined" (~19 errors). Nextflow auto-loads lib/*.groovy onto the
+# classpath at RUNTIME, but lint is a per-file static check that can't see
+# them, so every "<LibClass> is not defined" is spurious. NEVER "fix" a lib/
+# class reference to silence the linter. The signal worth acting on is
+# everything else: deprecation warnings, unused params, and any error whose
+# message is NOT "<LibClass> is not defined".
+
 # One-time per machine (and after bumping tests/nextflow-versions.txt):
 # install every pinned Nextflow version into a local, gitignored .test-tools/
 # tree. Needs Java + curl + internet.

@@ -52,14 +52,14 @@ workflow {
         BUILD_AWS_PANORAMA_SECRET(aws_user_id)
         panorama_secret_id = BUILD_AWS_PANORAMA_SECRET.out.aws_secret_id.first()
     } else {
-        panorama_secret_id = Channel.value('none')
+        panorama_secret_id = channel.value('none')
     }
 
     if( on_aws && needs_limelight ) {
         BUILD_AWS_LIMELIGHT_SECRET(aws_user_id)
         limelight_secret_id = BUILD_AWS_LIMELIGHT_SECRET.out.aws_secret_id.first()
     } else {
-        limelight_secret_id = Channel.value('none')
+        limelight_secret_id = channel.value('none')
     }
 
     if(params.fasta.startsWith("https://")) {
@@ -78,10 +78,10 @@ workflow {
 
     if(params.spectra_dir.contains("https://")) {
 
-        spectra_dirs_ch = Channel.from(params.spectra_dir)
-                                .splitText()               // split multiline input
-                                .map{ it.trim() }          // removing surrounding whitespace
-                                .filter{ it.length() > 0 } // skip empty lines
+        spectra_dirs_ch = channel.from(params.spectra_dir)
+                                .splitText()                       // split multiline input
+                                .map{ line -> line.trim() }        // removing surrounding whitespace
+                                .filter{ line -> line.length() > 0 } // skip empty lines
 
         // get raw files from panorama
         PANORAMA_GET_RAW_FILE_LIST(spectra_dirs_ch, panorama_secret_id)
@@ -106,10 +106,10 @@ workflow {
         }
 
         if(mzml_files.size() > 0) {
-                spectra_files_ch = Channel.fromList(mzml_files)
+                spectra_files_ch = channel.fromList(mzml_files)
                 from_raw_files = false;
         } else {
-                spectra_files_ch = Channel.fromList(raw_files)
+                spectra_files_ch = channel.fromList(raw_files)
                 from_raw_files = true;
         }
     }
@@ -124,11 +124,11 @@ workflow {
         file("${projectDir}/nextflow.config"),
         file("${launchDir}/nextflow.config"),
         file("${System.getProperty('user.home')}/.nextflow/config"),
-    ].collect { it.toAbsolutePath().normalize().toString() }
+    ].collect { cfg -> cfg.toAbsolutePath().normalize().toString() }
 
     limelight_config_files = workflow.configFiles
-        .collect { file(it) }
-        .findAll { !(it.toAbsolutePath().normalize().toString() in auto_loaded_configs) }
+        .collect { cfg -> file(cfg) }
+        .findAll { cfg -> !(cfg.toAbsolutePath().normalize().toString() in auto_loaded_configs) }
 
     if(Utils.asBool(params.process_separately)) {
         wf_comet_separate_percolator(spectra_files_ch, comet_params, fasta, from_raw_files, limelight_secret_id, limelight_config_files)
@@ -139,7 +139,7 @@ workflow {
     workflow.onComplete {
         try {
             email()
-        } catch (Exception e) {
+        } catch (Exception _e) {
             println "Warning: Error sending completion email."
         }
     }

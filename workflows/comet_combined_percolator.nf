@@ -32,10 +32,10 @@ workflow wf_comet_combined_percolator {
         COMET(mzml_file_ch, comet_params, fasta)
         FILTER_PIN(COMET.out.pin)
 
-        filtered_pin_files = FILTER_PIN.out.filtered_pin.map { it[1] }.collect()
+        filtered_pin_files = FILTER_PIN.out.filtered_pin.map { _sample_id, pin_file -> pin_file }.collect()
         COMBINE_PIN_FILES(filtered_pin_files)
 
-        combined_pin_tuple = Channel.of("combined").combine(COMBINE_PIN_FILES.out.combined_pin)
+        combined_pin_tuple = channel.of("combined").combine(COMBINE_PIN_FILES.out.combined_pin)
         PERCOLATOR(
             combined_pin_tuple,
             Utils.asBool(params.limelight_import_decoys)
@@ -44,8 +44,8 @@ workflow wf_comet_combined_percolator {
         if (Utils.asBool(params.limelight_upload)) {
 
             CONVERT_TO_LIMELIGHT_XML_COM(
-                COMET.out.pepxml.map { it[1] }.collect(), 
-                PERCOLATOR.out.pout.map { it[1] },
+                COMET.out.pepxml.map { _sample_id, pepxml -> pepxml }.collect(),
+                PERCOLATOR.out.pout.map { _sample_id, pout -> pout },
                 fasta, 
                 comet_params,
                 Utils.asBool(params.limelight_import_decoys),
@@ -54,7 +54,7 @@ workflow wf_comet_combined_percolator {
 
             UPLOAD_TO_LIMELIGHT_COM(
                 CONVERT_TO_LIMELIGHT_XML_COM.out.limelight_xml,
-                mzml_file_ch.map { it[1] }.collect(),
+                mzml_file_ch.map { _sample_id, mzml -> mzml }.collect(),
                 fasta,
                 limelight_config_files,
                 params.limelight_webapp_url,

@@ -34,10 +34,10 @@ process UPLOAD_TO_LIMELIGHT_SEP {
     // Attach the user-supplied config file(s), with smtp credentials redacted
     // (sed replaces the staged symlink with a sanitized copy; the original on
     // disk is untouched).
-    config_names = config_files ? (config_files as List).collect { it.name } : []
-    add_file_params = config_names.collect { "--add-file=\"${it}\"" }.join(' ')
-    sanitize_configs = config_names.collect {
-        "sed -i -E -e \"s/smtp\\.password\\s*=\\s*'[^']*'/smtp.password = 'PASSWORD HIDDEN'/g\" -e \"s/smtp\\.user\\s*=\\s*'[^']*'/smtp.user = 'USER HIDDEN'/g\" \"${it}\""
+    config_names = config_files ? (config_files as List).collect { cfg -> cfg.name } : []
+    add_file_params = config_names.collect { name -> "--add-file=\"${name}\"" }.join(' ')
+    sanitize_configs = config_names.collect { name ->
+        "sed -i -E -e \"s/smtp\\.password\\s*=\\s*'[^']*'/smtp.password = 'PASSWORD HIDDEN'/g\" -e \"s/smtp\\.user\\s*=\\s*'[^']*'/smtp.user = 'USER HIDDEN'/g\" \"${name}\""
     }.join('\n    ')
 
     """
